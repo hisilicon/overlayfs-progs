@@ -4,7 +4,7 @@ CC = gcc
 
 all: overlay
 
-objects = fsck.o common.o ovl.o lib.o check.o mount.o path.o overlayfs.o
+objects = fsck.o common.o ovl.o lib.o check.o feature.o mount.o path.o overlayfs.o
 
 overlay: $(objects)
 	$(CC) $(LFLAGS) $(objects) -o fsck.overlay

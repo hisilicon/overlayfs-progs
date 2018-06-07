@@ -19,6 +19,17 @@
 #ifndef OVL_COMMON_H
 #define OVL_COMMON_H
 
+#include <linux/types.h>
+#include <endian.h>
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#include <linux/byteorder/little_endian.h>
+#else
+#include <linux/byteorder/big_endian.h>
+#endif
+
+#define be64_to_cpu __be64_to_cpu
+#define cpu_to_be64 __cpu_to_be64
+
 #ifndef __attribute__
 # if !defined __GNUC__ || __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 8) || __STRICT_ANSI__
 #  define __attribute__(x)
