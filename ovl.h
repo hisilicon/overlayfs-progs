@@ -40,6 +40,9 @@ struct ovl_layer {
 	int type;		/* OVL_UPPER or OVL_LOWER */
 	int stack;		/* lower layer stack number, OVL_LOWER use only */
 	int flag;		/* special flag for this layer */
+	__u64 compat;		/* compatible features */
+	__u64 ro_compat;	/* read-only compatible features */
+	__u64 incompat;		/* incompatible features */
 };
 
 /* Information for the whole overlay filesystem */

@@ -25,6 +25,8 @@
 #ifndef OVL_OVERLAYFS_H
 #define OVL_OVERLAYFS_H
 
+#include <linux/types.h>
+
 /* Name of overlay filesystem type */
 #define OVERLAY_NAME "overlay"
 
@@ -43,6 +45,30 @@
 #define OVL_REDIRECT_XATTR	OVL_XATTR_PREFIX "redirect"
 #define OVL_ORIGIN_XATTR	OVL_XATTR_PREFIX "origin"
 #define OVL_IMPURE_XATTR	OVL_XATTR_PREFIX "impure"
+#define OVL_FEATURE_XATTR	OVL_XATTR_PREFIX "feature"
+
+/* Features */
+#define OVL_FEATURE_COMPAT_SUPP 		(0)
+#define OVL_FEATURE_COMPAT_UNKNOWN		(~OVL_FEATURE_COMPAT_SUPP)
+
+#define OVL_FEATURE_RO_COMPAT_SUPP		(0)
+#define OVL_FEATURE_RO_COMPAT_UNKNOWN		(~OVL_FEATURE_RO_COMPAT_SUPP)
+
+#define OVL_FEATURE_INCOMPAT_SUPP		(0)
+#define OVL_FEATURE_INCOMPAT_UNKNOWN		(~OVL_FEATURE_INCOMPAT_SUPP)
+
+#define OVL_FEATURE_MAGIC	0xfe
+#define OVL_FEATURE_VERSION_1	0x1
+
+/* On-disk overlay layer features */
+struct ovl_d_feature {
+	__u8 magic;		/* 0xfe */
+	__u8 version;		/* feature version */
+	__u16 pad;
+	__be64 compat;		/* compatible features */
+	__be64 ro_compat;	/* read-only compatible features */
+	__be64 incompat;	/* incompatible features */
+} __attribute__((packed));
 
 unsigned int ovl_split_lowerdirs(char *lower);
 char *ovl_next_opt(char **s);

@@ -47,6 +47,7 @@
 #include "check.h"
 #include "mount.h"
 #include "overlayfs.h"
+#include "feature.h"
 
 char *program_name;
 
