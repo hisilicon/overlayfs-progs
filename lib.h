@@ -22,6 +22,7 @@
 /* Scan layer flag */
 #define FS_LAYER_RO	(1 << 0)	/* layer is read-only */
 #define FS_LAYER_XATTR	(1 << 1)	/* layer support xattr */
+#define FS_LAYER_INDEX	(1 << 2)	/* workdir indexed */
 
 /* Option flags */
 #define FL_UPPER	(0x10000000)	/* specify upper layer */

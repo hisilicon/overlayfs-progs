@@ -30,6 +30,9 @@
 /* Name of overlay filesystem type */
 #define OVERLAY_NAME "overlay"
 
+/* Name of overlay index dir */
+#define OVL_INDEXDIR_NAME "index"
+
 /* overlay max lower stacks */
 #define OVL_MAX_STACK 500
 
