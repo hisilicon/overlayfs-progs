@@ -42,6 +42,7 @@
 #include "check.h"
 #include "path.h"
 #include "list.h"
+#include "feature.h"
 #include "overlayfs.h"
 
 /* Lookup context */
@@ -851,7 +852,8 @@ static void ovl_scan_report(struct scan_result *result)
 }
 
 /* Report the invalid targets left */
-static void ovl_scan_check(struct scan_result *result)
+static void ovl_scan_check(struct ovl_layer *layer,
+			   struct scan_result *result)
 {
 	bool inconsistency = false;
 
@@ -899,6 +901,31 @@ static void ovl_scan_update_result(struct scan_result *pass,
 	total->m_impure = max(pass->m_impure, total->m_impure);
 }
 
+static int ovl_scan_feature(struct ovl_layer *layer, struct scan_result *result)
+{
+	int ret = 0;
+
+	/*
+	 * Fix redirect dir feature if we found redirect xattr in this layer.
+	 * Note that this is not necessary if user say "n" now for backward
+	 * compatibility.
+	 */
+	if (result->t_redirects && !ovl_has_feature_redirect_dir(layer) &&
+	    (layer->flag & FS_LAYER_XATTR) && !(layer->flag & FS_LAYER_RO)) {
+
+		if (ovl_ask_action("Missing redirect feature", layer->path,
+				   layer->type, layer->stack, "fix", 0)) {
+			ret = ovl_set_feature_redirect_dir(layer);
+			if (ret)
+				return ret;
+
+			set_changed(&status);
+		}
+	}
+
+	return 0;
+}
+
 static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 			  int pass, struct scan_result *result)
 {
@@ -906,7 +933,7 @@ static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 	struct scan_operations ops = {};
 	char skip[256] = {0};
 	bool scan = false;
-	int ret;
+	int ret, err;
 
 	if (flags & FL_VERBOSE)
 		print_info(_("Scan and fix: "
@@ -959,13 +986,15 @@ static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 		return 0;
 
 	sctx.layer = layer;
-	ret = scan_dir(&sctx, &ops);
+	err = scan_dir(&sctx, &ops);
+	ret = ovl_scan_feature(layer, &sctx.result);
+	err = err ?: ret;
 
 	/* Check scan result for this pass */
-	ovl_scan_check(&sctx.result);
+	ovl_scan_check(layer, &sctx.result);
 	ovl_scan_cumsum_result(&sctx.result, result);
 
-	return ret;
+	return err;
 }
 
 /* Scan upperdir and each lowerdirs, check and fix inconsistency */
