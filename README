@@ -83,7 +83,6 @@ Usage
    -n,                       make no changes to the filesystem
    -y,                       assume "yes" to all questions
    -v, --verbose             print more messages of overlayfs
-   -h, --help                display this usage of overlayfs
    -V, --version             display version information
 
    Example:

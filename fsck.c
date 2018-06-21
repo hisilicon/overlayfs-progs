@@ -243,7 +243,7 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 static void usage(void)
 {
 	print_info(_("Usage:\n\t%s [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] "
-		    "[-pnyvhV]\n\n"), program_name);
+		    "[-pnyvV]\n\n"), program_name);
 	print_info(_("Options:\n"
 		    "-o,                       specify underlying directories of overlayfs\n"
 		    "                          multiple lower directories use ':' as separator\n"
@@ -251,7 +251,6 @@ static void usage(void)
 		    "-n,                       make no changes to the filesystem\n"
 		    "-y,                       assume \"yes\" to all questions\n"
 		    "-v, --verbose             print more messages of overlayfs\n"
-		    "-h, --help                display this usage of overlayfs\n"
 		    "-V, --version             display version information\n"));
 	exit(FSCK_USAGE);
 }
@@ -268,11 +267,10 @@ static void parse_options(int argc, char *argv[])
 	struct option long_options[] = {
 		{"verbose", no_argument, NULL, 'v'},
 		{"version", no_argument, NULL, 'V'},
-		{"help", no_argument, NULL, 'h'},
 		{NULL, 0, NULL, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "o:apnyvVh",
+	while ((c = getopt_long(argc, argv, "o:apnyvV",
 		long_options, NULL)) != -1) {
 
 		switch (c) {
@@ -305,7 +303,6 @@ static void parse_options(int argc, char *argv[])
 		case 'V':
 			version();
 			exit(0);
-		case 'h':
 		default:
 			usage();
 			return;
