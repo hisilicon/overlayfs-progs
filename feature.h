@@ -34,4 +34,7 @@ int ovl_init_empty_feature(struct ovl_layer *layer);
 /* Check feature set on one layer were support or not */
 bool ovl_check_feature_support(struct ovl_layer *layer);
 
+/* Print each layer's features */
+void ovl_print_feature_set(struct ovl_layer *layer);
+
 #endif /* OVL_FEATURE_H */

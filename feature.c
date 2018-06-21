@@ -34,6 +34,86 @@
 
 extern char *program_name;
 
+enum ovl_feature_type {
+	OVL_FEATURE_COMPAT = 0,
+	OVL_FEATURE_RO_COMPAT,
+	OVL_FEATURE_INCOMPAT,
+	OVL_FEATURE_TYPE_MAX
+};
+
+struct ovl_feature {
+	enum ovl_feature_type type;
+	__u64 mask;
+	const char *string;
+};
+
+static struct ovl_feature ovl_feature_list[] = {
+	/* Compatible */
+	/* Read-only compatible */
+	/* Incompatible */
+	{0, 0, NULL}
+};
+
+/*
+ * Switch feature mask bit to string, return the feature string directly
+ * if the feature mask is known, return feature compatible type and bit
+ * number otherwise.
+ */
+static const char *ovl_feature2string(enum ovl_feature_type type, __u64 mask)
+{
+	struct ovl_feature *of;
+	static char string[32];
+	int num;
+
+	/* Known feature */
+	for (of = ovl_feature_list; of->string; of++) {
+		if (type == of->type && mask == of->mask)
+			return of->string;
+	}
+
+	/* Unknown feature */
+	for (num = 0; mask >>= 1; num++);
+	if (type == OVL_FEATURE_COMPAT)
+		snprintf(string, sizeof(string), "FEATURE_COMPAT_BIT%d", num);
+	else if (type == OVL_FEATURE_RO_COMPAT)
+		snprintf(string, sizeof(string), "FEATURE_RO_COMPAT_BIT%d", num);
+	else if (type == OVL_FEATURE_INCOMPAT)
+		snprintf(string, sizeof(string), "FEATURE_INCOMPTA_BIT%d", num);
+	else
+		snprintf(string, sizeof(string), "FEATURE_UNKNOWN");
+	return string;
+}
+
+static void ovl_print_features(struct ovl_layer *layer)
+{
+	enum ovl_feature_type type;
+	int total = 0;
+	__u64 bit;
+	__u64 masks[OVL_FEATURE_TYPE_MAX] = {
+		[OVL_FEATURE_COMPAT] = layer->compat,
+		[OVL_FEATURE_RO_COMPAT] = layer->ro_compat,
+		[OVL_FEATURE_INCOMPAT] = layer->incompat,
+	};
+	__u64 *mask = masks;
+
+	for (type = 0; type < OVL_FEATURE_TYPE_MAX; type++, mask++) {
+		for (bit = 1; bit != 0; bit<<=1) {
+			const char *p;
+
+			if (!(*mask & bit))
+				continue;
+
+			p = ovl_feature2string(type, bit);
+			print_info("%s ", p);
+			total++;
+		}
+	}
+
+	if (!total)
+		print_info(_("none"));
+	print_info(_("\n"));
+}
+
 /* Set feature xattr to layer's roo dir */
 int ovl_set_feature(struct ovl_layer *layer)
 {
@@ -54,6 +134,13 @@ int ovl_set_feature(struct ovl_layer *layer)
 			 sizeof(struct ovl_d_feature));
 }
 
+static ssize_t ovl_get_feature(struct ovl_layer *layer,
+			       struct ovl_d_feature **odf)
+{
+	return get_xattr(layer->fd, ".", OVL_FEATURE_XATTR,
+			 (char **)odf, NULL);
+}
+
 /*
  * Get feature from feature xattr on layer root dir and check validity.
  *
@@ -67,9 +154,7 @@ int ovl_get_check_feature(struct ovl_layer *layer,
 	int err;
 
 	/* Read layer feature xattr */
-	ret = get_xattr(layer->fd, ".", OVL_FEATURE_XATTR,
-			(char **)odf, NULL);
-
+	ret = ovl_get_feature(layer, odf);
 	if (ret <= 0) {
 		err = (int)ret;
 		*odf = NULL;
@@ -131,4 +216,28 @@ bool ovl_check_feature_support(struct ovl_layer *layer)
 	}
 
 	return support;
+}
+
+/* Print each layer's features */
+void ovl_print_feature_set(struct ovl_layer *layer)
+{
+	struct ovl_d_feature *odf = NULL;
+	int err;
+
+	if (layer->type == OVL_UPPER)
+		print_info(_("Upper layer features: "));
+	else
+		print_info(_("Lower layer %d features: "), layer->stack);
+
+	err = ovl_get_feature(layer, &odf);
+	if (err < 0 || err == EINVAL) {
+		print_info(_("invalid xattr\n"));
+	} else if (!odf) {
+		print_info(_("no xattr\n"));
+	} else {
+		layer->compat = be64_to_cpu(odf->compat);
+		layer->ro_compat = be64_to_cpu(odf->ro_compat);
+		layer->incompat = be64_to_cpu(odf->incompat);
+		ovl_print_features(layer);
+	}
 }

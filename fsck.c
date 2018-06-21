@@ -240,16 +240,32 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 	return 0;
 }
 
+void ovl_display_feature_set(struct ovl_fs *ofs)
+{
+	int i;
+
+	print_info(_("%s %s\n"), program_name, PACKAGE_VERSION);
+
+	if (flags & FL_UPPER)
+		ovl_print_feature_set(&ofs->upper_layer);
+
+	for (i = 0; i < ofs->lower_num; i++)
+		ovl_print_feature_set(&ofs->lower_layer[i]);
+
+	print_info(_("\n"));
+}
+
 static void usage(void)
 {
 	print_info(_("Usage:\n\t%s [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] "
-		    "[-pnyvV]\n\n"), program_name);
+		    "[-pnyhvV]\n\n"), program_name);
 	print_info(_("Options:\n"
 		    "-o,                       specify underlying directories of overlayfs\n"
 		    "                          multiple lower directories use ':' as separator\n"
 		    "-p,                       automatic repair (no questions)\n"
 		    "-n,                       make no changes to the filesystem\n"
 		    "-y,                       assume \"yes\" to all questions\n"
+		    "-h,                       display the features information on each layer\n"
 		    "-v, --verbose             print more messages of overlayfs\n"
 		    "-V, --version             display version information\n"));
 	exit(FSCK_USAGE);
@@ -270,7 +286,7 @@ static void parse_options(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 
-	while ((c = getopt_long(argc, argv, "o:apnyvV",
+	while ((c = getopt_long(argc, argv, "o:apnyhvV",
 		long_options, NULL)) != -1) {
 
 		switch (c) {
@@ -296,6 +312,9 @@ static void parse_options(int argc, char *argv[])
 				conflict = true;
 			else
 				flags |= FL_OPT_YES;
+			break;
+		case 'h':
+			flags |= FL_DSP_FEATURE;
 			break;
 		case 'v':
 			flags |= FL_VERBOSE;
@@ -397,6 +416,13 @@ int main(int argc, char *argv[])
 	/* Open all specified base dirs */
 	if (ovl_open_dirs(&ofs))
 		goto err;
+
+	/* Display feature on each layers */
+	if (flags & FL_DSP_FEATURE) {
+		ovl_display_feature_set(&ofs);
+		ovl_clean_dirs(&ofs);
+		return 0;
+	}
 
 	/* Ensure overlay filesystem not mounted */
 	if (ovl_check_mount(&ofs, &mounted))
