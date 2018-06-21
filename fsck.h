@@ -36,6 +36,7 @@
 
 /* Option flags */
 #define FL_VERBOSE		(0x00000001)	/* verbose */
+#define FL_DSP_FEATURE		(0x00000002)	/* display features on each layer */
 
 
 static inline void set_inconsistency(int *status)
