@@ -32,6 +32,9 @@ int ovl_set_feature(struct ovl_layer *layer,
 /* Check feature set on one layer were support or not */
 bool ovl_check_feature_support(struct ovl_layer *layer);
 
+/* Display each layer's features */
+void ovl_display_layer_features(struct ovl_layer *layer);
+
 #define OVL_FEATURE_COMPAT_FUNCS(name, flagname) \
 static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
 { \

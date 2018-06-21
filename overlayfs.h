@@ -77,9 +77,10 @@ static inline bool ovl_has_unknown_incompat_features(struct ovl_layer *layer)
 }
 
 enum ovl_feature_type {
-	OVL_FEATURE_COMPAT,
+	OVL_FEATURE_COMPAT = 0,
 	OVL_FEATURE_RO_COMPAT,
-	OVL_FEATURE_INCOMPAT
+	OVL_FEATURE_INCOMPAT,
+	OVL_FEATURE_TYPE_MAX
 };
 
 /* On-disk overlay layer features */

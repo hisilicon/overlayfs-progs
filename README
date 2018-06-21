@@ -97,6 +97,7 @@ Usage
    -p,                       automatic repair (no questions)
    -n,                       make no changes to the filesystem
    -y,                       assume "yes" to all questions
+   -h,                       display the features information on each layer
    -v, --verbose             print more messages of overlayfs
    -V, --version             display version information
 

@@ -170,3 +170,98 @@ bool ovl_check_feature_support(struct ovl_layer *layer)
 
 	return support;
 }
+
+struct ovl_feature {
+	enum ovl_feature_type type;
+	__u64 mask;
+	const char *string;
+};
+
+static struct ovl_feature ovl_feature_list[] = {
+	/* Compatible */
+	{OVL_FEATURE_COMPAT, OVL_FEATURE_COMPAT_FEATURE_SET, "feature_set"},
+	/* Read-only compatible */
+	/* Incompatible */
+	{0, 0, NULL}
+};
+
+/*
+ * Switch feature mask bit to string, return the feature string directly
+ * if the feature mask is known, return feature compatible type and bit
+ * number otherwise.
+ */
+static const char *ovl_feature2string(enum ovl_feature_type type, __u64 mask)
+{
+	struct ovl_feature *of;
+	static char string[32];
+	int num;
+
+	/* Known feature */
+	for (of = ovl_feature_list; of->string; of++) {
+		if (type == of->type && mask == of->mask)
+			return of->string;
+	}
+
+	/* Unknown feature */
+	for (num = 0; mask >>= 1; num++);
+	if (type == OVL_FEATURE_COMPAT)
+		snprintf(string, sizeof(string), "FEATURE_COMPAT_BIT%d", num);
+	else if (type == OVL_FEATURE_RO_COMPAT)
+		snprintf(string, sizeof(string), "FEATURE_RO_COMPAT_BIT%d", num);
+	else if (type == OVL_FEATURE_INCOMPAT)
+		snprintf(string, sizeof(string), "FEATURE_INCOMPTA_BIT%d", num);
+	else
+		snprintf(string, sizeof(string), "FEATURE_UNKNOWN");
+	return string;
+}
+
+/* Display each layer's features */
+void ovl_display_layer_features(struct ovl_layer *layer)
+{
+	enum ovl_feature_type type;
+	__u64 masks[OVL_FEATURE_TYPE_MAX] = {
+		[OVL_FEATURE_COMPAT] = layer->compat,
+		[OVL_FEATURE_RO_COMPAT] = layer->ro_compat,
+		[OVL_FEATURE_INCOMPAT] = layer->incompat,
+	};
+	__u64 *mask = masks;
+	__u64 bit;
+	int total;
+	int err;
+
+	if (layer->type == OVL_UPPER)
+		print_info(_("Upper layer %s features: "), layer->path);
+	else
+		print_info(_("Lower layer %d %s features: "),
+			     layer->stack, layer->path);
+
+	err = ovl_get_features(layer);
+	if (err < 0 || err == EINVAL) {
+		print_info(_("invalid xattr\n"));
+		return;
+	} else if (err == ENODATA) {
+		print_info(_("no xattr\n"));
+		return;
+	} else if (err == ENOTSUP) {
+		print_info(_("unsupport xattr\n"));
+		return;
+	}
+
+	for (type = 0, total = 0; type < OVL_FEATURE_TYPE_MAX;
+	     type++, mask++) {
+		for (bit = 1; bit != 0; bit<<=1) {
+			const char *p;
+
+			if (!(*mask & bit))
+				continue;
+
+			p = ovl_feature2string(type, bit);
+			print_info(_("%s "), p);
+			total++;
+		}
+	}
+	if (total == 0)
+		print_info(_("none"));
+
+	print_info(_("\n"));
+}
