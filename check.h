@@ -19,6 +19,11 @@
 #ifndef OVL_WHITECHECK_H
 #define OVL_WHITECHECK_H
 
+/* Scan pass */
+#define OVL_SCAN_PASS_ONE	0
+#define OVL_SCAN_PASS_TWO	1
+#define OVL_SCAN_PASS_MAX	2
+
 /* Scan upperdir and each lowerdirs, check and fix inconsistency */
 int ovl_scan_fix(struct ovl_fs *ofs);
 

@@ -37,6 +37,7 @@
 
 #include "common.h"
 #include "lib.h"
+#include "fsck.h"
 #include "check.h"
 #include "path.h"
 #include "list.h"
