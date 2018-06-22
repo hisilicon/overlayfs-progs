@@ -41,6 +41,7 @@
 
 #include "common.h"
 #include "config.h"
+#include "ovl.h"
 #include "lib.h"
 #include "fsck.h"
 #include "check.h"
@@ -52,137 +53,6 @@ char *program_name;
 struct ovl_fs ofs = {};
 int flags = 0;		/* user input option flags */
 int status = 0;		/* fsck scan status */
-
-/*
- * Open underlying dirs (include upper dir and lower dirs), check system
- * file descriptor limits and try to expend it if necessary.
- */
-static int ovl_open_dirs(struct ovl_fs *ofs)
-{
-	unsigned int i;
-	struct rlimit rlim;
-	rlim_t rlim_need = ofs->lower_num + 20;
-
-	/* If RLIMIT_NOFILE limit is small than we need, try to expand limit */
-	if ((getrlimit(RLIMIT_NOFILE, &rlim))) {
-		print_err(_("Failed to getrlimit:%s\n"), strerror(errno));
-		return -1;
-	}
-	if (rlim.rlim_cur < rlim_need) {
-		print_info(_("Process fd number limit=%lu "
-			     "too small, need %lu\n"),
-			     rlim.rlim_cur, rlim_need);
-
-		rlim.rlim_cur = rlim_need;
-		if (rlim.rlim_max < rlim.rlim_cur)
-			rlim.rlim_max = rlim.rlim_cur;
-
-		if ((setrlimit(RLIMIT_NOFILE, &rlim))) {
-			print_err(_("Failed to setrlimit:%s\n"),
-				    strerror(errno));
-			return -1;
-		}
-	}
-
-	if (ofs->upper_layer.path) {
-		ofs->upper_layer.fd = open(ofs->upper_layer.path,
-			       O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC);
-		if (ofs->upper_layer.fd < 0) {
-			print_err(_("Failed to open %s:%s\n"),
-				    ofs->upper_layer.path, strerror(errno));
-			return -1;
-		}
-
-		ofs->workdir.fd = open(ofs->workdir.path, O_RDONLY|O_NONBLOCK|
-				       O_DIRECTORY|O_CLOEXEC);
-		if (ofs->workdir.fd < 0) {
-			print_err(_("Failed to open %s:%s\n"),
-				    ofs->workdir.path, strerror(errno));
-			goto err;
-		}
-	}
-
-	for (i = 0; i < ofs->lower_num; i++) {
-		ofs->lower_layer[i].fd = open(ofs->lower_layer[i].path,
-				  O_RDONLY|O_NONBLOCK|O_DIRECTORY|O_CLOEXEC);
-		if (ofs->lower_layer[i].fd < 0) {
-			print_err(_("Failed to open %s:%s\n"),
-				    ofs->lower_layer[i].path, strerror(errno));
-			goto err2;
-		}
-	}
-
-	return 0;
-err2:
-	for (i--; i >= 0; i--) {
-		close(ofs->lower_layer[i].fd);
-		ofs->lower_layer[i].fd = 0;
-	}
-	close(ofs->workdir.fd);
-	ofs->workdir.fd = 0;
-err:
-	close(ofs->upper_layer.fd);
-	ofs->upper_layer.fd = 0;
-	return -1;
-}
-
-/* Cleanup underlying directories buffers */
-static void ovl_clean_dirs(struct ovl_fs *ofs)
-{
-	int i;
-
-	for (i = 0; i < ofs->lower_num; i++) {
-		if (ofs->lower_layer && ofs->lower_layer[i].fd) {
-			close(ofs->lower_layer[i].fd);
-			ofs->lower_layer[i].fd = 0;
-		}
-		free(ofs->lower_layer[i].path);
-		ofs->lower_layer[i].path = NULL;
-	}
-	free(ofs->lower_layer);
-	ofs->lower_layer = NULL;
-	ofs->lower_num = 0;
-
-	if (ofs->upper_layer.path) {
-		close(ofs->upper_layer.fd);
-		ofs->upper_layer.fd = 0;
-		free(ofs->upper_layer.path);
-		ofs->upper_layer.path = NULL;
-		close(ofs->workdir.fd);
-		ofs->workdir.fd = 0;
-		free(ofs->workdir.path);
-		ofs->workdir.path = NULL;
-	}
-}
-
-/* Do basic check for one layer */
-static int ovl_basic_check_layer(struct ovl_layer *layer)
-{
-	struct statfs statfs;
-	ssize_t ret;
-	int err;
-
-	/* Check the underlying layer is read-only or not */
-	err = fstatfs(layer->fd, &statfs);
-	if (err) {
-		print_err(_("fstatfs failed:%s\n"), strerror(errno));
-		return -1;
-	}
-
-	if (statfs.f_flags & ST_RDONLY)
-		layer->flag |= FS_LAYER_RO;
-
-	/* Check the underlying layer support xattr or not */
-	ret = fgetxattr(layer->fd, OVL_XATTR_PREFIX, NULL, 0);
-	if (ret < 0 && errno != ENOTSUP && errno != ENODATA) {
-		print_err(_("flistxattr failed:%s\n"), strerror(errno));
-		return -1;
-	} else if (ret >= 0 || errno == ENODATA) {
-		layer->flag |= FS_LAYER_XATTR;
-	}
-
-	return 0;
-}
 
 /* Do some basic check for the workdir, not iterate the dir */
 static int ovl_basic_check_workdir(struct ovl_fs *ofs)
