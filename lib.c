@@ -36,7 +36,6 @@
 #include "path.h"
 
 extern int flags;
-extern int status;
 
 static int ask_yn(const char *question, int def)
 {
