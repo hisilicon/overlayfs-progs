@@ -19,34 +19,6 @@
 #ifndef OVL_LIB_H
 #define OVL_LIB_H
 
-/* Common return value */
-#define FSCK_OK          0	/* No errors */
-#define FSCK_NONDESTRUCT 1	/* File system errors corrected */
-#define FSCK_REBOOT      2	/* System should be rebooted */
-#define FSCK_UNCORRECTED 4	/* File system errors left uncorrected */
-#define FSCK_ERROR       8	/* Operational error */
-#define FSCK_USAGE       16	/* Usage or syntax error */
-#define FSCK_CANCELED	 32	/* Aborted with a signal or ^C */
-#define FSCK_LIBRARY     128	/* Shared library error */
-
-/* Fsck status */
-#define OVL_ST_INCONSISTNECY	(1 << 0)
-#define OVL_ST_ABORT		(1 << 1)
-#define OVL_ST_CHANGED		(1 << 2)
-
-/* Option flags */
-#define FL_VERBOSE	(1 << 0)	/* verbose */
-#define FL_UPPER	(1 << 1)	/* specify upper directory */
-#define FL_OPT_AUTO	(1 << 3)	/* automactically scan dirs and repair */
-#define FL_OPT_NO	(1 << 4)	/* no changes to the filesystem */
-#define FL_OPT_YES	(1 << 5)	/* yes to all questions */
-#define FL_OPT_MASK	(FL_OPT_AUTO|FL_OPT_NO|FL_OPT_YES)
-
-/* Scan pass */
-#define OVL_SCAN_PASS_ONE	0
-#define OVL_SCAN_PASS_TWO	1
-#define OVL_SCAN_PASS_MAX	2
-
 /* Scan path type */
 #define OVL_UPPER	0
 #define OVL_LOWER	1
@@ -56,6 +28,14 @@
 /* Scan layer flag */
 #define FS_LAYER_RO	(1 << 0)	/* layer is read-only */
 #define FS_LAYER_XATTR	(1 << 1)	/* layer support xattr */
+
+/* Option flags */
+#define FL_UPPER	(0x10000000)	/* specify upper layer */
+#define FL_OPT_AUTO	(0x20000000)	/* automactically scan dirs and repair */
+#define FL_OPT_NO	(0x40000000)	/* no changes to the filesystem */
+#define FL_OPT_YES	(0x80000000)	/* yes to all questions */
+#define FL_OPT_MASK	(FL_OPT_AUTO|FL_OPT_NO|FL_OPT_YES)
+
 
 /* Information for each underlying layer */
 struct ovl_layer {
@@ -110,21 +90,6 @@ struct scan_operations {
 	int (*impurity)(struct scan_ctx *);
 	int (*impure)(struct scan_ctx *);
 };
-
-static inline void set_inconsistency(int *status)
-{
-	*status |= OVL_ST_INCONSISTNECY;
-}
-
-static inline void set_abort(int *status)
-{
-	*status |= OVL_ST_ABORT;
-}
-
-static inline void set_changed(int *status)
-{
-	*status |= OVL_ST_CHANGED;
-}
 
 int scan_dir(struct scan_ctx *sctx, struct scan_operations *sop);
 int ask_question(const char *question, int def);
