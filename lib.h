@@ -19,12 +19,6 @@
 #ifndef OVL_LIB_H
 #define OVL_LIB_H
 
-/* Scan path type */
-#define OVL_UPPER	0
-#define OVL_LOWER	1
-#define OVL_WORK	2
-#define OVL_PTYPE_MAX	3
-
 /* Scan layer flag */
 #define FS_LAYER_RO	(1 << 0)	/* layer is read-only */
 #define FS_LAYER_XATTR	(1 << 1)	/* layer support xattr */
@@ -36,23 +30,6 @@
 #define FL_OPT_YES	(0x80000000)	/* yes to all questions */
 #define FL_OPT_MASK	(FL_OPT_AUTO|FL_OPT_NO|FL_OPT_YES)
 
-
-/* Information for each underlying layer */
-struct ovl_layer {
-	char *path;		/* root dir path for this layer */
-	int fd;			/* root dir fd for this layer */
-	int type;		/* OVL_UPPER or OVL_LOWER */
-	int stack;		/* lower layer stack number, OVL_LOWER use only */
-	int flag;		/* special flag for this layer */
-};
-
-/* Information for the whole overlay filesystem */
-struct ovl_fs {
-	struct ovl_layer upper_layer;
-	struct ovl_layer *lower_layer;
-	int lower_num;
-	struct ovl_layer workdir;
-};
 
 /* Directories scan data structs */
 struct scan_dir_data {

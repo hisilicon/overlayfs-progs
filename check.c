@@ -36,6 +36,7 @@
 #include <linux/limits.h>
 
 #include "common.h"
+#include "ovl.h"
 #include "lib.h"
 #include "fsck.h"
 #include "check.h"
@@ -191,34 +192,6 @@ static inline bool ovl_is_origin(int dirfd, const char *pathname)
 	bool exist = false;
 	get_xattr(dirfd, pathname, OVL_ORIGIN_XATTR, NULL, &exist);
 	return exist;
-}
-
-static inline int ovl_ask_action(const char *description, const char *pathname,
-				 int dirtype, int stack,
-				 const char *question, int action)
-{
-	if (dirtype == OVL_UPPER || dirtype == OVL_WORK)
-		print_info(_("%s: \"%s\" in %s "),
-			     description, pathname, "upperdir");
-	else
-		print_info(_("%s: \"%s\" in %s-%d "),
-			     description, pathname, "lowerdir", stack);
-
-	return ask_question(question, action);
-}
-
-static inline int ovl_ask_question(const char *question, const char *pathname,
-				   int dirtype, int stack,
-				   int action)
-{
-	if (dirtype == OVL_UPPER || dirtype == OVL_WORK)
-		print_info(_("%s: \"%s\" in %s "),
-			     question, pathname, "upperdir");
-	else
-		print_info(_("%s: \"%s\" in %s-%d "),
-			     question, pathname, "lowerdir", stack);
-
-	return ask_question("", action);
 }
 
 /*

@@ -32,6 +32,7 @@
 #include <linux/limits.h>
 
 #include "common.h"
+#include "ovl.h"
 #include "lib.h"
 #include "config.h"
 #include "check.h"
