@@ -151,10 +151,41 @@ enum ovl_status {
 };
 
 /*
+ * Scan feature set on this layer, If it exists that means this layer
+ * may be mounted by overlayfs, we cannot overwrite it simply because
+ * it may lead to inconsistency.
+ */
+static int ovl_scan_layer(struct ovl_layer *layer, bool *empty)
+{
+	struct ovl_d_feature *odf = NULL;
+	int ret;
+
+	/* Get basic layer feature */
+	ret = ovl_basic_check_layer(layer);
+	if (ret)
+		return ret;
+
+	/* Check feature set is empty or not */
+	if (layer->flag & FS_LAYER_XATTR) {
+		ret = ovl_get_feature(layer, &odf);
+		if (ret < 0)
+			return ret;
+		if (ret > 0) {
+			free(odf);
+			*empty = false;
+			return 0;
+		}
+	}
+
+	*empty = true;
+	return 0;
+}
+
+/*
  * Scan the whole filesystem to check the specified layers could be
  * make a new overlayfs appropriately. Do the following check:
  * 1. Mount check: treat mounted if any one layer is mounted,
- * 2. Empty check: check the existence of index/work dir,
+ * 2. Empty check: check the existence of feature set and index/work dir,
  * 3. Writeable check: the upper layer should read-write,
  * 4. Xattr check: the upper layer should support xattr.
  */
@@ -162,6 +193,7 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 {
 	int i;
 	bool mounted;
+	bool empty;
 	int ret;
 
 	/* Check the filesystem is mounted or not */
@@ -203,9 +235,14 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 	if (flags & FL_UPPER) {
 		struct ovl_layer *upper_layer = &ofs->upper_layer;
 
-		ret = ovl_basic_check_layer(upper_layer);
+		ret = ovl_scan_layer(upper_layer, &empty);
 		if (ret)
 			return ret;
+
+		if (!empty) {
+			*ost = OVL_SCAN_NO_EMPTY;
+			return 0;
+		}
 
 		if (upper_layer->flag & FS_LAYER_RO) {
 			*ost = OVL_SCAN_UPPER_RO;
@@ -220,9 +257,14 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 	for (i = 0; i < ofs->lower_num; i++) {
 		struct ovl_layer *lower_layer = &ofs->lower_layer[i];
 
-		ret = ovl_basic_check_layer(lower_layer);
+		ret = ovl_scan_layer(lower_layer, &empty);
 		if (ret)
 			return ret;
+
+		if (!empty) {
+			*ost = OVL_SCAN_NO_EMPTY;
+			return 0;
+		}
 	}
 
 	*ost = OVL_SCAN_OK;
