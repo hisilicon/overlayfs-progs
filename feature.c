@@ -134,8 +134,8 @@ int ovl_set_feature(struct ovl_layer *layer)
 			 sizeof(struct ovl_d_feature));
 }
 
-static ssize_t ovl_get_feature(struct ovl_layer *layer,
-			       struct ovl_d_feature **odf)
+ssize_t ovl_get_feature(struct ovl_layer *layer,
+			struct ovl_d_feature **odf)
 {
 	return get_xattr(layer->fd, ".", OVL_FEATURE_XATTR,
 			 (char **)odf, NULL);

@@ -24,6 +24,10 @@
 /* Set feature xattr to layer's roo dir */
 int ovl_set_feature(struct ovl_layer *layer);
 
+/* Get feature xattr to layer's root dir */
+ssize_t ovl_get_feature(struct ovl_layer *layer,
+			struct ovl_d_feature **odf);
+
 /* Get feature from feature xattr on layer root dir and check validity */
 int ovl_get_check_feature(struct ovl_layer *layer,
 			  struct ovl_d_feature **odf);
