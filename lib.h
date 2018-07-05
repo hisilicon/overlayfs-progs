@@ -95,5 +95,5 @@ ssize_t get_xattr(int dirfd, const char *pathname, const char *xattrname,
 int set_xattr(int dirfd, const char *pathname, const char *xattrname,
 	      void *value, size_t size);
 int remove_xattr(int dirfd, const char *pathname, const char *xattrname);
-
+int list_xattr(int dirfd, const char *pathname, char **xattrs);
 #endif /* OVL_LIB_H */
