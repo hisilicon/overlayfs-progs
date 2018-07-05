@@ -147,14 +147,16 @@ enum ovl_status {
 	OVL_SCAN_UPPER_RO,		/* upper layer is read-only */
 	OVL_SCAN_UPPER_NOXATTR,		/* Upper layer not support xattr */
 	OVL_SCAN_MOUNTED,		/* The filesystem is mounted */
+	OVL_SCAN_NO_EMPTY,		/* The filesystem is not empty */
 };
 
 /*
  * Scan the whole filesystem to check the specified layers could be
  * make a new overlayfs appropriately. Do the following check:
  * 1. Mount check: treat mounted if any one layer is mounted,
- * 2. Writeable check: The upper layer should read-write,
- * 3. Xattr check: The upper layer should support xattr.
+ * 2. Empty check: check the existence of index/work dir,
+ * 3. Writeable check: the upper layer should read-write,
+ * 4. Xattr check: the upper layer should support xattr.
  */
 static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 {
@@ -170,6 +172,31 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 	if (mounted) {
 		*ost = OVL_SCAN_MOUNTED;
 		return 0;
+	}
+
+	/* Check "work/index" dir exists or not */
+	if (flags & FL_UPPER) {
+		struct stat st;
+
+		ret = fstatat(ofs->workdir.fd, "work", &st, AT_SYMLINK_NOFOLLOW);
+		if (ret && errno != ENOENT) {
+			print_err(_("Failed to fstatat work: %s\n"), strerror(errno));
+			return ret;
+		}
+		if (!ret) {
+			*ost = OVL_SCAN_NO_EMPTY;
+			return 0;
+		}
+
+		ret = fstatat(ofs->workdir.fd, "index", &st, AT_SYMLINK_NOFOLLOW);
+		if (ret && errno != ENOENT) {
+			print_err(_("Failed to fstatat work: %s\n"), strerror(errno));
+			return ret;
+		}
+		if (!ret) {
+			*ost = OVL_SCAN_NO_EMPTY;
+			return 0;
+		}
 	}
 
 	/* Check each layer's basic feature */
@@ -206,6 +233,7 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
  * Scan the whole filesystem, we will refuse to make a new overlayfs if
  * 1. The upper layer is read-only or does not support xattr,
  * 2. Any one layer is mounted by overlayfs.
+ * 3. Any one layer is not empty(contains overlayfs related features).
  */
 static int ovl_check_filesystem(struct ovl_fs *ofs)
 {
@@ -225,6 +253,13 @@ static int ovl_check_filesystem(struct ovl_fs *ofs)
 	case OVL_SCAN_MOUNTED:
 		print_info(_("This overlay filesystem is mounted, "
 			     "will not make a filesystem here!\n"));
+		break;
+	case OVL_SCAN_NO_EMPTY:
+		print_info(_("These directories contains an existing "
+			     "overlay filesystem, will not make a "
+			     "filesystem here!\n"));
+		print_info(_("Please run fsck.overlay to check "
+			     "this filesystem!\n"));
 		break;
 	case OVL_SCAN_UPPER_RO:
 		print_info(_("The upper layer is read-only!\n"));
