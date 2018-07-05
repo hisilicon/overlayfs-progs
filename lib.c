@@ -188,6 +188,47 @@ int remove_xattr(int dirfd, const char *pathname, const char *xattrname)
 	return ret;
 }
 
+/* List xattr */
+int list_xattr(int dirfd, const char *pathname, char **xattrs)
+{
+	char *buf = NULL;
+	int fd;
+	int ret;
+
+	fd = openat(dirfd, pathname, O_CLOEXEC|O_NONBLOCK|O_NOFOLLOW|O_RDONLY);
+	if (fd < 0) {
+		print_err(_("Failed to openat %s: %s\n"),
+			    pathname, strerror(errno));
+		return -1;
+	}
+
+	ret = flistxattr(fd, NULL, 0);
+	if (ret < 0) {
+		if (errno != ENOTSUP)
+			goto fail;
+		ret = 0;
+		goto out;
+	}
+	if (ret == 0)
+		goto out;
+
+	buf = (char *)smalloc(ret);
+	ret = flistxattr(fd, buf, ret);
+	if (ret <= 0)
+		goto fail2;
+
+	*xattrs = buf;
+out:
+	close(fd);
+	return ret;
+fail2:
+	free(buf);
+fail:
+	print_err(_("Cannot flistxattr %s: %s\n"), pathname,
+		    strerror(errno));
+	goto out;
+}
+
 
 static void scan_entry_init(struct scan_ctx *sctx, FTSENT *ftsent)
 {
