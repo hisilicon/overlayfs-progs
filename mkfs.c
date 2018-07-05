@@ -150,14 +150,48 @@ enum ovl_status {
 	OVL_SCAN_NO_EMPTY,		/* The filesystem is not empty */
 };
 
+/* Count whiteouts in this scan process */
+int ovl_count_whiteouts(struct scan_ctx *sctx)
+{
+	if (is_whiteout(sctx->st))
+		sctx->result.t_whiteouts++;
+	return 0;
+}
+
+/* Count overlayfs related xattrs in this scan process */
+int ovl_count_xattrs(struct scan_ctx *sctx)
+{
+	struct ovl_layer *layer = sctx->layer;
+	int ret = 0;
+	char *xattrs = NULL;
+	char *p;
+
+	ret = list_xattr(layer->fd, sctx->pathname, &xattrs);
+	if (ret <= 0)
+		return ret;
+
+	while ((p = strsep(&xattrs, "")) != NULL) {
+		if (!strncmp(p, OVL_XATTR_PREFIX,
+			     strlen(OVL_XATTR_PREFIX))) {
+			sctx->result.xattrs++;
+			break;
+		}
+	}
+
+	return 0;
+}
+
 /*
- * Scan feature set on this layer, If it exists that means this layer
- * may be mounted by overlayfs, we cannot overwrite it simply because
- * it may lead to inconsistency.
+ * Scan feature set and overlay related xattrs/whiteouts on this layer,
+ * If anyone of them exists that means this layer may be mounted by
+ * overlayfs, we cannot overwrite it simply because it may lead to
+ * inconsistency.
  */
 static int ovl_scan_layer(struct ovl_layer *layer, bool *empty)
 {
 	struct ovl_d_feature *odf = NULL;
+	struct scan_ctx sctx = {};
+	struct scan_operations ops = {};
 	int ret;
 
 	/* Get basic layer feature */
@@ -177,7 +211,15 @@ static int ovl_scan_layer(struct ovl_layer *layer, bool *empty)
 		}
 	}
 
-	*empty = true;
+	/* Check overlay related xattrs in this layer */
+	sctx.layer = layer;
+	ops.xattr = ovl_count_xattrs;
+	ops.whiteout = ovl_count_whiteouts;
+	ret = scan_dir(&sctx, &ops);
+	if (ret)
+		return ret;
+
+	*empty = !(sctx.result.xattrs || sctx.result.t_whiteouts);
 	return 0;
 }
 
@@ -185,7 +227,8 @@ static int ovl_scan_layer(struct ovl_layer *layer, bool *empty)
  * Scan the whole filesystem to check the specified layers could be
  * make a new overlayfs appropriately. Do the following check:
  * 1. Mount check: treat mounted if any one layer is mounted,
- * 2. Empty check: check the existence of feature set and index/work dir,
+ * 2. Empty check: check the existence of overlay related xattrs/whiteouts,
+ *                 feature set and index/work dir,
  * 3. Writeable check: the upper layer should read-write,
  * 4. Xattr check: the upper layer should support xattr.
  */

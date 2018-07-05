@@ -41,6 +41,7 @@ struct scan_dir_data {
 struct scan_result {
 	int files;		/* total files */
 	int directories;	/* total directories */
+	int xattrs;		/* total ovl xattrs */
 	int t_whiteouts;	/* total whiteouts */
 	int i_whiteouts;	/* invalid whiteouts */
 	int t_redirects;	/* total redirect dirs */
@@ -66,6 +67,7 @@ struct scan_operations {
 	int (*origin)(struct scan_ctx *);
 	int (*impurity)(struct scan_ctx *);
 	int (*impure)(struct scan_ctx *);
+	int (*xattr)(struct scan_ctx *);
 };
 
 /* Whiteout */
