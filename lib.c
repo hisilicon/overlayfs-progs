@@ -285,6 +285,11 @@ int scan_dir(struct scan_ctx *sctx, struct scan_operations *sop)
 			ret = scan_check_entry(sop->impurity, sctx);
 			if (ret)
 			        goto out;
+
+			/* Check xattrs */
+			ret = scan_check_entry(sop->xattr, sctx);
+			if (ret)
+				goto out;
 			break;
 		case FTS_DEFAULT:
 			/* Check whiteouts */
@@ -302,6 +307,11 @@ int scan_dir(struct scan_ctx *sctx, struct scan_operations *sop)
 
 			/* Check impurities */
 			ret = scan_check_entry(sop->impurity, sctx);
+			if (ret)
+				goto out;
+
+			/* Check xattrs */
+			ret = scan_check_entry(sop->xattr, sctx);
 			if (ret)
 				goto out;
 
