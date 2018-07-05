@@ -1,3 +1,47 @@
+mkfs.overlay
+============
+
+mkfs.overlay is used to create an overlay filesystem in the underlying
+directories on base filesystme.
+
+This program init feature sets to each layer's root directory with "trusted.
+overlay.feature" xattr valued to the feature bit mask, and could only be used
+for create filesystem on new directories.
+
+This program will refuse to make filesystem if one of the following mismatch:
+
+1) The "work" or "index" directory exists in workdir.
+2) Whiteout or overlayfs related xattrs in the underlying layers.
+3) Feature sets exists on the layer's root directory.
+4) Any one of the underlying layers is mounted.
+
+The first three items mean the underlying directories which user want to make
+a overlay-filesystem has already been mounted by another overlayfs, it may
+contian objects created by overlayfs, overwrite them directly to create a new
+one may lead to inconsistency, so mkfs.overlay will refuse to make and advise
+to use fsck.overlay.
+
+Usage
+-----
+
+1. Ensure the underlying directories haven't been or isn't being mounted which
+   need to make a new overlay-filesystem.
+
+2. Run mkfs.overlay program:
+   Usage:
+   fsck.overlay [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] [-vV]
+
+   Options:
+   -o,                       specify underlying directories of overlayfs:
+                             multiple lower directories use ':' as separator
+   -v, --verbose             print more messages of overlayfs
+   -V, --version             display version information
+
+   Example:
+   mkfs.overlay -o lowerdir=lower,upperdir=upper,workdir=work
+
+
+
 fsck.overlay
 ============
 
@@ -6,8 +50,7 @@ of overlay-filesystem.
 
 Check the following points:
 
-Whiteouts
----------
+1. Whiteouts
 
 A whiteout is a character device with 0/0 device number. It is used to record
 the removed files or directories, When a whiteout is found in a directory,
@@ -15,8 +58,7 @@ there should be at least one directory or file with the same name in any of the
 corresponding lower layers. If not exist, the whiteout will be treated as orphan
 whiteout and remove.
 
-Redirect directories
---------------------
+2. Redirect directories
 
 An redirect directory is a directory with "trusted.overlay.redirect" xattr
 valued to the path of the original location from the root of the overlay. It
@@ -44,8 +86,7 @@ If not,
 3) Record redirect xattrs but not sure which one is invalid, ask user by
    default and warn in auto mode.
 
-Impure directories
-------------------
+3. Impure directories
 
 An impure directory is a directory with "trusted.overlay.impure" xattr valued
 'y', which indicate that this directory may contain copied up targets from lower
@@ -67,7 +108,7 @@ So, the impure xattr should be set if a direcotry contains origin targets or
 redirect/merge subdirectories. If not, fix the impure xattr.
 
 Usage
-=====
+-----
 
 1. Ensure overlay filesystem is not mounted based on directories which need to
    check.
@@ -100,7 +141,7 @@ Usage
    128    Shared-library error
 
 Note
-====
+----
 
 1. It is strongly recommend to run this program after modifing underlying
    directories while overlay filesystem is offline.
@@ -108,12 +149,13 @@ Note
    directories) are required to run this program.
 
 No Support
-==========
+----------
 
 Current version cannot support overlayfs which was mounted with new
 features introduced in Linux kernel >= 4.13, include index, nfs_export
 and other upcoming features. Checking overlayfs which has these features
 may lead to inconsistency.
+
 
 Contributions
 =============
