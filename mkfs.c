@@ -146,18 +146,31 @@ enum ovl_status {
 	OVL_SCAN_OK,
 	OVL_SCAN_UPPER_RO,		/* upper layer is read-only */
 	OVL_SCAN_UPPER_NOXATTR,		/* Upper layer not support xattr */
+	OVL_SCAN_MOUNTED,		/* The filesystem is mounted */
 };
 
 /*
  * Scan the whole filesystem to check the specified layers could be
  * make a new overlayfs appropriately. Do the following check:
- * 1. Writeable check: The upper layer should read-write,
- * 2. Xattr check: The upper layer should support xattr.
+ * 1. Mount check: treat mounted if any one layer is mounted,
+ * 2. Writeable check: The upper layer should read-write,
+ * 3. Xattr check: The upper layer should support xattr.
  */
 static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 {
 	int i;
+	bool mounted;
 	int ret;
+
+	/* Check the filesystem is mounted or not */
+	ret = ovl_check_mount(ofs, &mounted);
+	if (ret)
+		return ret;
+
+	if (mounted) {
+		*ost = OVL_SCAN_MOUNTED;
+		return 0;
+	}
 
 	/* Check each layer's basic feature */
 	if (flags & FL_UPPER) {
@@ -191,7 +204,8 @@ static int ovl_scan_filesystem(struct ovl_fs *ofs, enum ovl_status *ost)
 
 /*
  * Scan the whole filesystem, we will refuse to make a new overlayfs if
- * the upper layer is read-only or does not support xattr.
+ * 1. The upper layer is read-only or does not support xattr,
+ * 2. Any one layer is mounted by overlayfs.
  */
 static int ovl_check_filesystem(struct ovl_fs *ofs)
 {
@@ -208,6 +222,10 @@ static int ovl_check_filesystem(struct ovl_fs *ofs)
 		print_info(_("Upper layer: %d\n"), !!(flags & FL_UPPER));
 		print_info(_("Lower layers: %d\n"), ofs->lower_num);
 		return 0;
+	case OVL_SCAN_MOUNTED:
+		print_info(_("This overlay filesystem is mounted, "
+			     "will not make a filesystem here!\n"));
+		break;
 	case OVL_SCAN_UPPER_RO:
 		print_info(_("The upper layer is read-only!\n"));
 		break;
