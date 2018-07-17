@@ -101,6 +101,20 @@ static inline char *ovl_match_dump(const char *opt, const char *type)
 }
 
 /*
+ * Parse overlay option on/off, return 1 if option on, 0 if option off,
+ * -1 if invalid.
+ */
+static inline int ovl_match_options(const char *opt, const char *type)
+{
+	if (!strcmp(opt+strlen(type), "on"))
+		return 1;
+	else if (!strcmp(opt+strlen(type), "off"))
+		return 0;
+	else
+		return -1;
+}
+
+/*
  * Resolve and get each underlying directory of overlay filesystem
  *
  * @config: underlying dirs user specified
@@ -171,6 +185,7 @@ void ovl_free_opt(struct ovl_config *config)
  */
 void ovl_parse_opt(char *opt, struct ovl_config *config)
 {
+	int opts;
 	char *p;
 
 	while ((p = ovl_next_opt(&opt)) != NULL) {
@@ -186,6 +201,9 @@ void ovl_parse_opt(char *opt, struct ovl_config *config)
 		} else if (!strncmp(p, OPT_WORKDIR, strlen(OPT_WORKDIR))) {
 			free(config->workdir);
 			config->workdir = ovl_match_dump(p, OPT_WORKDIR);
+		} else if (!strncmp(p, OPT_REDIRECT_DIR, strlen(OPT_REDIRECT_DIR))) {
+			if ((opts = ovl_match_options(p, OPT_REDIRECT_DIR)) != -1)
+				config->redirect_dir = (bool)opts;
 		}
 	}
 }
