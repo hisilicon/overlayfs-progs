@@ -37,4 +37,38 @@ bool ovl_check_feature_support(struct ovl_layer *layer);
 /* Print each layer's features */
 void ovl_print_feature_set(struct ovl_layer *layer);
 
+
+#define OVL_FEATURE_COMPAT_FUNCS(name, feature) \
+static inline bool ovl_has_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ((layer->compat & OVL_FEATURE_COMPAT_##feature) != 0); \
+} \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	layer->compat |= OVL_FEATURE_COMPAT_##feature; \
+	return ovl_set_feature(layer); \
+}
+
+#define OVL_FEATURE_RO_COMPAT_FUNCS(name, feature) \
+static inline bool ovl_has_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ((layer->ro_compat & OVL_FEATURE_RO_COMPAT_##feature) != 0); \
+} \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	layer->ro_compat |= OVL_FEATURE_RO_COMPAT_##feature; \
+	return ovl_set_feature(layer); \
+}
+
+#define OVL_FEATURE_INCOMPAT_FUNCS(name, feature) \
+static inline bool ovl_has_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ((layer->incompat & OVL_FEATURE_INCOMPAT_##feature) != 0); \
+} \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	layer->incompat |= OVL_FEATURE_INCOMPAT_##feature; \
+	return ovl_set_feature(layer); \
+}
+
 #endif /* OVL_FEATURE_H */
