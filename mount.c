@@ -216,6 +216,9 @@ void ovl_parse_opt(char *opt, struct ovl_config *config)
 		} else if (!strncmp(p, OPT_INDEX, strlen(OPT_INDEX))) {
 			if ((opts = ovl_match_options(p, OPT_INDEX)) != -1)
 				config->index = (bool)opts;
+		} else if (!strncmp(p, OPT_NFS_EXPORT, strlen(OPT_NFS_EXPORT))) {
+			if ((opts = ovl_match_options(p, OPT_NFS_EXPORT)) != -1)
+				config->nfs_export = (bool)opts;
 		}
 	}
 }

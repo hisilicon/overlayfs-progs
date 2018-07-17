@@ -41,6 +41,7 @@ struct ovl_config {
 	bool redirect_dir;
 	int format;
 	bool index;
+	bool nfs_export;
 };
 
 /* Information for each underlying layer */

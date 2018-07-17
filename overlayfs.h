@@ -43,6 +43,7 @@
 #define OPT_OVERLAYFS_V2 "overlayfs_v2="
 #define OPT_REDIRECT_DIR "redirect_dir="
 #define OPT_INDEX "index="
+#define OPT_NFS_EXPORT "nfs_export="
 
 /* Xattr */
 #define XATTR_TRUSTED_PREFIX	"trusted."
