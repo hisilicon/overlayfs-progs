@@ -213,6 +213,9 @@ void ovl_parse_opt(char *opt, struct ovl_config *config)
 		} else if (!strncmp(p, OPT_REDIRECT_DIR, strlen(OPT_REDIRECT_DIR))) {
 			if ((opts = ovl_match_options(p, OPT_REDIRECT_DIR)) != -1)
 				config->redirect_dir = (bool)opts;
+		} else if (!strncmp(p, OPT_INDEX, strlen(OPT_INDEX))) {
+			if ((opts = ovl_match_options(p, OPT_INDEX)) != -1)
+				config->index = (bool)opts;
 		}
 	}
 }
