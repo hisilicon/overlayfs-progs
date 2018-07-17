@@ -68,6 +68,25 @@ struct scan_operations {
 	int (*impure)(struct scan_ctx *);
 };
 
+/* Whiteout */
+#define WHITEOUT_DEV	0
+#define WHITEOUT_MOD	0
+
+static inline mode_t file_type(const struct stat *status)
+{
+	return status->st_mode & S_IFMT;
+}
+
+static inline bool is_whiteout(const struct stat *status)
+{
+	return (file_type(status) == S_IFCHR) && (status->st_rdev == WHITEOUT_DEV);
+}
+
+static inline bool is_dir(const struct stat *status)
+{
+	return file_type(status) == S_IFDIR;
+}
+
 int scan_dir(struct scan_ctx *sctx, struct scan_operations *sop);
 int ask_question(const char *question, int def);
 ssize_t get_xattr(int dirfd, const char *pathname, const char *xattrname,
