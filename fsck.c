@@ -151,7 +151,6 @@ static void usage(void)
 /* Parse options from user and check correctness */
 static void parse_options(int argc, char *argv[])
 {
-	struct ovl_config config = {0};
 	char *ovl_opts = NULL;
 	int i, c;
 	char **lowerdir = NULL;
@@ -169,7 +168,7 @@ static void parse_options(int argc, char *argv[])
 		switch (c) {
 		case 'o':
 			ovl_opts = sstrdup(optarg);
-			ovl_parse_opt(ovl_opts, &config);
+			ovl_parse_opt(ovl_opts, &ofs.config);
 			free(ovl_opts);
 			break;
 		case 'p':
@@ -203,7 +202,7 @@ static void parse_options(int argc, char *argv[])
 	}
 
 	/* Resolve and get each underlying directory of overlay filesystem */
-	if (ovl_get_dirs(&config, &lowerdir, &ofs.lower_num,
+	if (ovl_get_dirs(&ofs.config, &lowerdir, &ofs.lower_num,
 			 &ofs.upper_layer.path, &ofs.workdir.path))
 		goto err_out;
 
@@ -237,12 +236,11 @@ static void parse_options(int argc, char *argv[])
 		goto usage_out;
 	}
 
-	ovl_free_opt(&config);
 	free(lowerdir);
 	return;
 
 usage_out:
-	ovl_free_opt(&config);
+	ovl_free_opt(&ofs.config);
 	ovl_clean_dirs(&ofs);
 	free(lowerdir);
 	usage();
@@ -309,6 +307,7 @@ int main(int argc, char *argv[])
 		goto err;
 
 out:
+	ovl_free_opt(&ofs.config);
 	ovl_clean_dirs(&ofs);
 	fsck_exit();
 	return 0;
