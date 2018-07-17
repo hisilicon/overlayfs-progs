@@ -76,27 +76,8 @@ struct ovl_redirect_entry {
 	int stack;		/* redirect dir stack (valid in OVL_LOWER) */
 };
 
-/* Whiteout */
-#define WHITEOUT_DEV	0
-#define WHITEOUT_MOD	0
-
 extern int flags;
 extern int status;
-
-static inline mode_t file_type(const struct stat *status)
-{
-	return status->st_mode & S_IFMT;
-}
-
-static inline bool is_whiteout(const struct stat *status)
-{
-	return (file_type(status) == S_IFCHR) && (status->st_rdev == WHITEOUT_DEV);
-}
-
-static inline bool is_dir(const struct stat *status)
-{
-	return file_type(status) == S_IFDIR;
-}
 
 static bool is_dir_xattr(int dirfd, const char *pathname,
 			 const char *xattrname)
