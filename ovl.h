@@ -38,6 +38,7 @@ struct ovl_config {
 	char *lowerdir;
 	char *upperdir;
 	char *workdir;
+	bool redirect_dir;
 	int format;
 };
 

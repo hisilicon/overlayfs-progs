@@ -41,6 +41,7 @@
 #define OPT_UPPERDIR "upperdir="
 #define OPT_WORKDIR "workdir="
 #define OPT_OVERLAYFS_V2 "overlayfs_v2="
+#define OPT_REDIRECT_DIR "redirect_dir="
 
 /* Xattr */
 #define XATTR_TRUSTED_PREFIX	"trusted."
