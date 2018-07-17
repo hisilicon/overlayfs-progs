@@ -51,6 +51,7 @@ static struct ovl_feature ovl_feature_list[] = {
 	/* Compatible */
 	/* Read-only compatible */
 	/* Incompatible */
+	{OVL_FEATURE_INCOMPAT, OVL_FEATURE_INCOMPAT_REDIRECT_DIR, "redirect_dir"},
 	{0, 0, NULL}
 };
 
