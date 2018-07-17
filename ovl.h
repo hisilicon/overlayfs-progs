@@ -33,6 +33,7 @@ struct ovl_config {
 	char *workdir;
 	bool redirect_dir;
 	bool index;
+	bool nfs_export;
 };
 
 /* Information for each underlying layer */

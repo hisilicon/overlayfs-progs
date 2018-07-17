@@ -39,6 +39,7 @@
 #define OPT_WORKDIR "workdir="
 #define OPT_REDIRECT_DIR "redirect_dir="
 #define OPT_INDEX "index="
+#define OPT_NFS_EXPORT "nfs_export="
 
 /* Xattr */
 #define XATTR_TRUSTED_PREFIX	"trusted."
