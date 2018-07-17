@@ -32,6 +32,7 @@ struct ovl_config {
 	char *upperdir;
 	char *workdir;
 	bool redirect_dir;
+	bool index;
 };
 
 /* Information for each underlying layer */
