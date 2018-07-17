@@ -26,6 +26,13 @@
 #define OVL_WORK	2
 #define OVL_PTYPE_MAX	3
 
+
+struct ovl_config {
+	char *lowerdir;
+	char *upperdir;
+	char *workdir;
+};
+
 /* Information for each underlying layer */
 struct ovl_layer {
 	char *path;		/* root dir path for this layer */
@@ -44,6 +51,7 @@ struct ovl_fs {
 	struct ovl_layer *lower_layer;
 	int lower_num;
 	struct ovl_layer workdir;
+	struct ovl_config config;
 };
 
 /* Open underlying dirs */

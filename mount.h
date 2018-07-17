@@ -19,12 +19,6 @@
 #ifndef OVL_MOUNT_H
 #define OVL_MOUNT_H
 
-struct ovl_config {
-	char *lowerdir;
-	char *upperdir;
-	char *workdir;
-};
-
 void ovl_parse_opt(char *opt, struct ovl_config *config);
 void ovl_free_opt(struct ovl_config *config);
 int ovl_get_dirs(struct ovl_config *config, char ***lowerdir,
