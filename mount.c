@@ -186,6 +186,15 @@ void ovl_parse_opt(char *opt, struct ovl_config *config)
 		} else if (!strncmp(p, OPT_WORKDIR, strlen(OPT_WORKDIR))) {
 			free(config->workdir);
 			config->workdir = ovl_match_dump(p, OPT_WORKDIR);
+		} else if (!strncmp(p, OPT_OVERLAYFS_V2, strlen(OPT_OVERLAYFS_V2))) {
+			p += strlen(OPT_OVERLAYFS_V2);
+
+			if (!strcmp(p, "on"))
+				config->format = OVL_FS_V2;
+			else if (!strcmp(p, "upper"))
+				config->format = OVL_FS_UPPER_V2;
+			else if (!strcmp(p, "off"))
+				config->format = OVL_FS_V1;
 		}
 	}
 }
