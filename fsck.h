@@ -54,4 +54,17 @@ static inline void set_changed(int *status)
 	*status |= OVL_ST_CHANGED;
 }
 
+/*
+ * Feature set is not necessary for V1 underlying layers, but is necessary
+ * for V2 underlying layers.
+ */
+static inline bool ovl_feature_set_necessary(struct ovl_fs *ofs,
+					     struct ovl_layer *layer)
+{
+	return !((ofs->config.format == OVL_FS_V1) ||
+		 ((ofs->config.format == OVL_FS_UPPER_V2) &&
+		  (layer->type == OVL_LOWER)));
+}
+
+
 #endif /* OVL_FSCK_H */

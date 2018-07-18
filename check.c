@@ -901,26 +901,33 @@ static void ovl_scan_update_result(struct scan_result *pass,
 	total->m_impure = max(pass->m_impure, total->m_impure);
 }
 
-static int ovl_scan_feature(struct ovl_layer *layer, struct scan_result *result)
+static int ovl_scan_feature(struct ovl_fs *ofs, struct ovl_layer *layer,
+			    struct scan_result *result)
 {
 	int ret = 0;
 
+	if (layer->format == OVL_LAYER_V1)
+		return 0;
+
 	/*
 	 * Fix redirect dir feature if we found redirect xattr in this layer.
-	 * Note that this is not necessary if user say "n" now for backward
-	 * compatibility.
+	 * This is not necessary if user say "no" on the layer which feature
+	 * set is not necessary.
 	 */
 	if (result->t_redirects && !ovl_has_feature_redirect_dir(layer) &&
 	    (layer->flag & FS_LAYER_XATTR) && !(layer->flag & FS_LAYER_RO)) {
 
 		if (ovl_ask_action("Missing redirect feature", layer->path,
-				   layer->type, layer->stack, "fix", 0)) {
+				   layer->type, layer->stack, "fix", 1)) {
 			ret = ovl_set_feature_redirect_dir(layer);
-			if (ret)
-				return ret;
-
-			set_changed(&status);
+			if (!ret) {
+				set_changed(&status);
+				return 0;
+			}
 		}
+
+		if (ovl_feature_set_necessary(ofs, layer))
+			set_inconsistency(&status);
 	}
 
 	return 0;
@@ -987,7 +994,7 @@ static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 
 	sctx.layer = layer;
 	err = scan_dir(&sctx, &ops);
-	ret = ovl_scan_feature(layer, &sctx.result);
+	ret = ovl_scan_feature(ofs, layer, &sctx.result);
 	err = err ?: ret;
 
 	/* Check scan result for this pass */
