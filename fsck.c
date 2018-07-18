@@ -154,6 +154,9 @@ int ovl_check_feature_set(struct ovl_layer *layer)
 	 * features
 	 */
 	if (err == EINVAL) {
+		/* Layer becomes v2 if feature set is not empty */
+		layer->format = OVL_LAYER_V2;
+
 		if (layer->flag & FS_LAYER_RO)
 			goto inconsistency;
 
@@ -177,28 +180,43 @@ int ovl_check_feature_set(struct ovl_layer *layer)
 	 * empty one
 	 */
 	if (!odf) {
-		/* Do not init feature set if this layer is read-only */
-		if (layer->flag & FS_LAYER_RO)
-			goto out;
+		/*
+		 * Do not init feature set if this layer is read-only and
+		 * feature set is not necessary.
+		 */
+		if (layer->flag & FS_LAYER_RO) {
+			if (layer->format == OVL_LAYER_V1)
+				goto out;
+
+			print_info(_("Cannot init feature set because layer "
+				     "is read-only\n"));
+
+			goto inconsistency;
+		}
 
 		/*
-		 * Note that this is not necessary now if user say "no"
-		 * for backward compatibility
+		 * Init an empty one is not necessary if feature set is not
+		 * necessary when user say "no".
 		 */
 		if (ovl_ask_action("No feature set found", layer->path,
 				   layer->type, layer->stack,
-				   "Create an empty one", 0)) {
+				   "Create an empty one",
+				   (layer->format == OVL_LAYER_V2))) {
 
 			err = ovl_init_empty_feature(layer);
-			if (err)
-				goto fail;
-
-			set_changed(&status);
+			if (!err) {
+				set_changed(&status);
+				goto out;
+			}
 		}
-		goto out;
+		if (layer->format == OVL_LAYER_V1)
+			goto out;
+
+		goto inconsistency;
 	}
 
 	/* Check feature set support or not */
+	layer->format = OVL_LAYER_V2;
 	layer->compat = be64_to_cpu(odf->compat);
 	layer->ro_compat = be64_to_cpu(odf->ro_compat);
 	layer->incompat = be64_to_cpu(odf->incompat);
@@ -254,6 +272,13 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 			return -1;
 		}
 
+		/* Upper layer must support xattr when OVL_LAYER_V2 */
+		if ((ofs->upper_layer.format == OVL_LAYER_V2) &&
+		    !(ofs->upper_layer.flag & FS_LAYER_XATTR)) {
+			print_info(_("Upper should support xattr in V2\n"));
+			return -1;
+		}
+
 		/* Check layer feature */
 		if (ofs->upper_layer.flag & FS_LAYER_XATTR) {
 			ret = ovl_check_feature_set(&ofs->upper_layer);
@@ -289,6 +314,13 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 		ret = ovl_basic_check_layer(&ofs->lower_layer[i]);
 		if (ret)
 			return ret;
+
+		/* Lower layer must support xattr when OVL_LAYER_V2 */
+		if ((ofs->upper_layer.format == OVL_LAYER_V2) &&
+		    !(ofs->upper_layer.flag & FS_LAYER_XATTR)) {
+			print_info(_("Lower %d should support xattr in V2\n"), i);
+			return -1;
+		}
 
 		if (ofs->lower_layer[i].flag & FS_LAYER_XATTR) {
 			ret = ovl_check_feature_set(&ofs->lower_layer[i]);
@@ -394,16 +426,22 @@ static void parse_options(int argc, char *argv[])
 
 	ofs.lower_layer = smalloc(ofs.lower_num * sizeof(struct ovl_layer));
 	for (i = 0; i < ofs.lower_num; i++) {
+		ofs.lower_layer[i].format = (ofs.config.format == OVL_FS_V2) ?
+					      OVL_LAYER_V2 : OVL_LAYER_V1;
 		ofs.lower_layer[i].path = lowerdir[i];
 		ofs.lower_layer[i].type = OVL_LOWER;
 		ofs.lower_layer[i].stack = i;
 	}
 	if (ofs.upper_layer.path) {
+		ofs.upper_layer.format = (ofs.config.format != OVL_FS_V1) ?
+					   OVL_LAYER_V2 : OVL_LAYER_V1;
 		ofs.upper_layer.type = OVL_UPPER;
 		flags |= FL_UPPER;
 	}
-	if (ofs.workdir.path)
+	if (ofs.workdir.path) {
+		ofs.workdir.format = ofs.upper_layer.format;
 		ofs.workdir.type = OVL_WORK;
+	}
 
 	if (!ofs.lower_num ||
 	    (!(flags & FL_UPPER) && ofs.lower_num == 1)) {
