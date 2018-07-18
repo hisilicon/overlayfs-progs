@@ -353,11 +353,12 @@ void ovl_display_feature_set(struct ovl_fs *ofs)
 
 static void usage(void)
 {
-	print_info(_("Usage:\n\t%s [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] "
-		    "[-pnyhvV]\n\n"), program_name);
+	print_info(_("Usage:\n\t%s [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>]\n"
+		    "\t\t[-o options[,...]][-pnyhvV]\n\n"), program_name);
 	print_info(_("Options:\n"
 		    "-o,                       specify underlying directories of overlayfs\n"
-		    "                          multiple lower directories use ':' as separator\n"
+		    "                          and fs check options, multiple lower directories\n"
+		    "                          use ':' as separator\n"
 		    "-p,                       automatic repair (no questions)\n"
 		    "-n,                       make no changes to the filesystem\n"
 		    "-y,                       assume \"yes\" to all questions\n"
