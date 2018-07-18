@@ -291,7 +291,7 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 		 * this is not necessary now if user say 'n' for backward
 		 * compatibility
 		 */
-		if ((ofs->workdir.flag & FS_LAYER_XATTR) &&
+		if ((ofs->workdir.format == OVL_LAYER_V2) &&
 		    (ofs->workdir.flag & FS_LAYER_INDEX) &&
 		    !ovl_has_feature_index(&ofs->upper_layer)) {
 
@@ -299,17 +299,21 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 					   ofs->upper_layer.path,
 					   ofs->upper_layer.type,
 					   ofs->upper_layer.stack,
-					   "Fix", 0)) {
+					   "Fix", 1)) {
 
 				ret = ovl_set_feature_index(&ofs->upper_layer);
-				if (ret)
-					return ret;
-
-				set_changed(&status);
+				if (!ret) {
+					set_changed(&status);
+					goto lower;
+				}
 			}
+
+			if (ovl_feature_set_necessary(ofs, &ofs->upper_layer))
+				set_inconsistency(&status);
 		}
 	}
 
+lower:
 	for (i = 0; i < ofs->lower_num; i++) {
 		ret = ovl_basic_check_layer(&ofs->lower_layer[i]);
 		if (ret)
