@@ -57,10 +57,13 @@ unsigned int flags = 0;		/* user input option flags */
 
 static void usage(void)
 {
-	print_info(_("Usage:\n\t%s [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] "
-		     "[-vV]\n\n"), program_name);
+	print_info(_("Usage:\n\t%s "
+		     "[-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>]\n\t\t"
+		     "[-o features[...]][-vV]\n\n"), program_name);
 	print_info(_("Options:\n"
-		     "-o,                       specify underlying directories of overlayfs\n"
+		     "-o,                       specify underlying directories of overlayfs and\n"
+		     "                          overlay filesystem features, multiple lower\n"
+		     "                          directories use ':' as separator\n"
 		     "                          multiple lower directories use ':' as separator\n"
 		     "-v, --verbose             print more messages of overlayfs\n"
 		     "-V, --version             display version information\n"));
@@ -127,6 +130,11 @@ static void parse_options(int argc, char *argv[])
 
 	if (ofs.upper_layer.path && !ofs.workdir.path) {
 		print_info(_("Please specify correct workdir!\n\n"));
+		goto err_out2;
+	}
+
+	if (!ofs.config.index && ofs.config.nfs_export) {
+		print_info(_("Cannot set nfs_export feature when index feature is off!\n\n"));
 		goto err_out2;
 	}
 
@@ -370,11 +378,34 @@ static int ovl_make_filesystem(struct ovl_fs *ofs)
 	int i;
 	int ret = 0;
 
-	/* Init an empty feature set for upper layer */
 	if (flags & FL_UPPER) {
+		/* Init an empty feature set for upper layer */
 		ret = ovl_init_empty_feature(&ofs->upper_layer);
 		if (ret)
 			goto out;
+
+		/* Set specified feature set */
+		if (ofs->config.redirect_dir) {
+			ret = ovl_set_feature_redirect_dir(&ofs->upper_layer);
+			if (ret)
+				goto out;
+		}
+
+		/*
+		 * TODO: check an refuse to turn on "index" and "nfs_export"
+		 * feature if the underlying base file system does not
+		 * support file handle.
+		 */
+		if (ofs->config.index) {
+			ret = ovl_set_feature_index(&ofs->upper_layer);
+			if (ret)
+				goto out;
+		}
+		if (ofs->config.nfs_export) {
+			ret = ovl_set_feature_nfs_export(&ofs->upper_layer);
+			if (ret)
+				goto out;
+		}
 	}
 
 	/* Init an empty feature set for each lower layer */
