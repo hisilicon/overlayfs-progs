@@ -29,18 +29,37 @@ Usage
 
 2. Run mkfs.overlay program:
    Usage:
-   fsck.overlay [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] [-vV]
+   fsck.overlay [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>]
+                [-o features[,...]][-vV]
 
    Options:
-   -o,                       specify underlying directories of overlayfs:
-                             multiple lower directories use ':' as separator
+   -o,                       specify underlying directories of overlayfs and
+                             overlay filesystem features, multiple lower
+                             directories use ':' as separator
    -v, --verbose             print more messages of overlayfs
    -V, --version             display version information
 
    Example:
    mkfs.overlay -o lowerdir=lower,upperdir=upper,workdir=work
 
+Features
+--------
 
+The filesystem feature set is comprised of a list of features, separated by
+commas or each -o option. To enable or disable a feature, specify the feature
+name equal to "on" or "off" (e.g. redirect_dir=on to enable redirect dir
+feature).
+
+Three feature are supported:
+1. Redirect dir
+   The underlying layer will contain directories which have redirect dir xattr.
+2. Index
+   An index directory will be created in workdir to map lower linked inodes to
+   upper inodes.
+3. nfs export
+   Base on index feature, an index inode will be created on copy up of every
+   file and directory, and may also contain whiteout when an index inode is
+   removed.
 
 fsck.overlay
 ============
