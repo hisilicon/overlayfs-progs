@@ -81,6 +81,26 @@ There are three situations of setting impure xattr in overlay filesystem:
 So, the impure xattr should be set if a direcotry contains origin targets or
 redirect/merge subdirectories. If not, fix the impure xattr.
 
+Feature sets
+------------
+
+Feature set is a "trusted.overlay.feature" xattr on each underlying layer's
+root directory, valued to feature bitset, which indicate the features this layer
+was enabled, include backward compatible, read-only compatible and incompatible
+these three kinds of features, fsck program will refuse to check if unknown
+features were found in the feature set.
+
+The layer which have feature set xattr is on-disk format v2, and the layer
+doesn't have is on-disk format v1. Fsck program will detect features each
+underlying layer contains and then ask user to create or fix the feature set
+xattr, which means change on-disk format v1 to v2.
+
+Note that set feature set xattr to each underlying layer is optional, if user
+want to mount overlayfs with on-disk format v2 enforcement mount/module options
+("overlayfs_v2=<on/upper>" and "CONFIG_OVERLAY_[UPPER]_V2=y") after fsck, the
+counterpart fsck options (the same as mount options) must be specified when
+running fsck.overlay, it will force to fix inconsistent feature set xattr.
+
 Usage
 =====
 
@@ -89,11 +109,13 @@ Usage
 
 2. Run fsck.overlay program:
    Usage:
-   fsck.overlay [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>] [-pnyvhV]
+   fsck.overlay [-o lowerdir=<lowers>,upperdir=<upper>,workdir=<work>]
+                [-o options[,...]][-pnyvhV]
 
    Options:
-   -o,                       specify underlying directories of overlayfs:
-                             multiple lower directories use ':' as separator
+   -o,                       specify underlying directories of overlayfs and
+                             fs check options, multiple lower directories
+                             use ':' as separator
    -p,                       automatic repair (no questions)
    -n,                       make no changes to the filesystem
    -y,                       assume "yes" to all questions
@@ -113,6 +135,23 @@ Usage
    16     Usage or syntax error
    32     Checking canceled by user request
    128    Shared-library error
+
+4. Options
+
+- ovelrayfs_v2=<on/upper/off>
+
+  This option the same as overlayfs mount options, but the effects are different.
+  If say "off", fsck will ask user to create feature set when the input layer is
+  on-disk format v1, and ask user to fix feature set when the feature set lose
+  some feaures, but these two actions are not necessary, doesn't create or fix
+  is also fine. One excetpion, if the feature set exists but was corrupted, fsck
+  shall fix it.
+  If say "on", the feature xattr becomes necessary on all layers. The underlying
+  layer is inconsistent if the feature set xattr doesn't exist, is corrupted or
+  lose some features, fsck shall fix all these three cases.
+  If say "upper", release the requirement of the lower layers, the upper laayer
+  should be consistent on-disk format v2, and the lowers can by either format v1
+  or v2.
 
 Note
 ====
