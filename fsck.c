@@ -171,10 +171,16 @@ static int ovl_basic_check_layer(struct ovl_layer *layer)
 	if (statfs.f_flags & ST_RDONLY)
 		layer->flag |= FS_LAYER_RO;
 
+	/* A nested overlayfs does not support OVL_XATTR_PREFIX xattr */
+	if (statfs.f_type == OVERLAYFS_SUPER_MAGIC) {
+		layer->flag |= FS_LAYER_XATTR;
+		return 0;
+	}
+
 	/* Check the underlying layer support xattr or not */
 	ret = fgetxattr(layer->fd, OVL_XATTR_PREFIX, NULL, 0);
 	if (ret < 0 && errno != ENOTSUP && errno != ENODATA) {
-		print_err(_("flistxattr failed:%s\n"), strerror(errno));
+		print_err(_("fgetxattr failed:%s\n"), strerror(errno));
 		return -1;
 	} else if (ret >= 0 || errno == ENODATA) {
 		layer->flag |= FS_LAYER_XATTR;
