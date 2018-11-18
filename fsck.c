@@ -98,6 +98,83 @@ static int ovl_basic_check_workdir(struct ovl_fs *ofs)
 }
 
 /*
+ * Check and fix layer feature set, return 0 if it pass checking,
+ * errno if something wrong.
+ */
+static int ovl_check_feature_set(struct ovl_layer *layer)
+{
+	int err;
+
+	/* Read layer's feature xattr */
+	err = ovl_get_features(layer);
+	if (err < 0)
+		return err;
+
+	if (err == ENOTSUP) {
+		/* High version of feature set, stop checking */
+		print_info(_("High version of features found in %s layer:%s\n"
+			     "Get a newer version of %s!\n"),
+			     (layer->type == OVL_UPPER) ? "upper" : "lower",
+			     layer->path, program_name);
+		goto fail;
+
+	} else if (err == EINVAL) {
+		/*
+		 * Feature set becomes untrusted if it was corrupted. Do
+		 * not fix it automaticily because this layer may
+		 * contains unsupported features.
+		 */
+		if (layer->flag & FS_LAYER_RO)
+			goto inconsistency;
+
+		if (ovl_ask_action("Bad feature set found", layer->path,
+				   layer->type, layer->stack,
+				   "Recreate an empty one", 0)) {
+
+			err = ovl_set_feature_feature_set(layer);
+			if (err)
+				goto inconsistency;
+
+			set_changed(&status);
+			goto out;
+		}
+		goto inconsistency;
+
+	} else if (err == ENODATA) {
+		/*
+		 * No feature set found on this layer, try to init an
+		 * empty one.
+		 */
+		if (layer->flag & FS_LAYER_RO)
+			goto out;
+
+		/*
+		 * Note that this is not necessary now if user say "no"
+		 * for backward compatibility.
+		 */
+		if (ovl_ask_action("No feature set found", layer->path,
+				   layer->type, layer->stack,
+				   "Create an empty one", 0)) {
+
+			err = ovl_set_feature_feature_set(layer);
+			if (err)
+				goto fail;
+
+			set_changed(&status);
+		}
+		goto out;
+	}
+out:
+	return err;
+
+inconsistency:
+	set_inconsistency(&status);
+fail:
+	err = -1;
+	goto out;
+}
+
+/*
  * Do basic check for the underlying filesystem, refuse to do futher check
  * if something wrong.
  */
@@ -123,12 +200,25 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 				     "should be read-write\n"));
 			return -1;
 		}
+
+		/* Check layer feature */
+		if (ofs->upper_layer.flag & FS_LAYER_XATTR) {
+			ret = ovl_check_feature_set(&ofs->upper_layer);
+			if (ret)
+				return ret;
+		}
 	}
 
 	for (i = 0; i < ofs->lower_num; i++) {
 		ret = ovl_basic_check_layer(&ofs->lower_layer[i]);
 		if (ret)
 			return ret;
+
+		if (ofs->lower_layer[i].flag & FS_LAYER_XATTR) {
+			ret = ovl_check_feature_set(&ofs->lower_layer[i]);
+			if (ret)
+				return ret;
+		}
 	}
 
 	return 0;
