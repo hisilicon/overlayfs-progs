@@ -81,3 +81,60 @@ out:
 	free(odf);
 	return err;
 }
+
+/* Set feature to the feature set xattr on one layer root dir */
+int ovl_set_feature(struct ovl_layer *layer,
+		    enum ovl_feature_type type,
+		    __u64 mask)
+{
+	struct ovl_d_feature odf = { };
+	__u64 compat, ro_compat, incompat;
+	__u64 *feature, *temp;
+	int err;
+
+	switch (type) {
+	case OVL_FEATURE_COMPAT:
+		feature = &layer->compat;
+		temp = &compat;
+		break;
+	case OVL_FEATURE_RO_COMPAT:
+		feature = &layer->ro_compat;
+		temp = &ro_compat;
+		break;
+	case OVL_FEATURE_INCOMPAT:
+		feature = &layer->incompat;
+		temp = &incompat;
+		break;
+	default:
+		return -1;
+	}
+
+	if ((*feature) & mask)
+		return 0;
+
+	compat = layer->compat;
+	ro_compat = layer->ro_compat;
+	incompat = layer->incompat;
+	*temp |= mask;
+
+	/* Set on-disk feature set xattr */
+	odf.magic = OVL_FEATURE_MAGIC;
+	odf.version = OVL_FEATURE_VERSION_1;
+	odf.compat = cpu_to_be64(compat);
+	odf.ro_compat = cpu_to_be64(ro_compat);
+	odf.incompat = cpu_to_be64(incompat);
+
+	print_debug(_("Set feature set on %s root: %s: compat=%llx, "
+		      "ro_compat=%llx, incompat=%llx\n"),
+		      layer->type == OVL_UPPER ? "upper" : "lower",
+		      layer->path, compat, ro_compat, incompat);
+
+	err = set_xattr(layer->fd, ".", OVL_FEATURE_XATTR, &odf,
+			sizeof(struct ovl_d_feature));
+	if (err)
+		return err;
+
+	/* Update in-memory feature set */
+	*feature = *temp;
+	return err;
+}

@@ -60,6 +60,12 @@
 #define OVL_FEATURE_MAGIC	0xfe
 #define OVL_FEATURE_VERSION_1	0x1
 
+enum ovl_feature_type {
+	OVL_FEATURE_COMPAT,
+	OVL_FEATURE_RO_COMPAT,
+	OVL_FEATURE_INCOMPAT
+};
+
 /* On-disk overlay layer features */
 struct ovl_d_feature {
 	__u8 magic;		/* 0xfe */

@@ -24,4 +24,30 @@
 /* Get feature from feature xattr on layer root dir and check validity */
 int ovl_get_features(struct ovl_layer *layer);
 
+/* Set feature to feature xattr on layer root dir */
+int ovl_set_feature(struct ovl_layer *layer,
+		    enum ovl_feature_type type,
+		    __u64 mask);
+
+#define OVL_FEATURE_COMPAT_FUNCS(name, flagname) \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ovl_set_feature(layer, OVL_FEATURE_COMPAT, \
+			OVL_FEATURE_COMPAT_##flagname); \
+} \
+
+#define OVL_FEATURE_RO_COMPAT_FUNCS(name, flagname) \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ovl_set_feature(layer, OVL_FEATURE_RO_COMPAT, \
+			OVL_FEATURE_RO_COMPAT_##flagname); \
+} \
+
+#define OVL_FEATURE_INCOMPAT_FUNCS(name, flagname) \
+static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
+{ \
+	return ovl_set_feature(layer, OVL_FEATURE_INCOMPAT, \
+			OVL_FEATURE_INCOMPAT_##flagname); \
+}
+
 #endif /* OVL_FEATURE_H */
