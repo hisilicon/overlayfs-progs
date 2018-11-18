@@ -67,6 +67,10 @@ int ovl_get_features(struct ovl_layer *layer)
 	if (odf->version > OVL_FEATURE_VERSION_1)
 		goto out;
 
+	err = EINVAL;
+	if (!(odf->compat & cpu_to_be64(OVL_FEATURE_COMPAT_FEATURE_SET)))
+		goto out;
+
 	err = 0;
 	layer->compat = be64_to_cpu(odf->compat);
 	layer->ro_compat = be64_to_cpu(odf->ro_compat);
@@ -112,7 +116,8 @@ int ovl_set_feature(struct ovl_layer *layer,
 	if ((*feature) & mask)
 		return 0;
 
-	compat = layer->compat;
+	/* Set "feature set" feature automatically */
+	compat = layer->compat | OVL_FEATURE_COMPAT_FEATURE_SET;
 	ro_compat = layer->ro_compat;
 	incompat = layer->incompat;
 	*temp |= mask;
@@ -135,6 +140,7 @@ int ovl_set_feature(struct ovl_layer *layer,
 		return err;
 
 	/* Update in-memory feature set */
+	layer->compat = compat;
 	*feature = *temp;
 	return err;
 }
