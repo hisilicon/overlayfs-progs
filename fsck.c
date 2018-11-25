@@ -206,6 +206,16 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 			ret = ovl_check_feature_set(&ofs->upper_layer);
 			if (ret)
 				return ret;
+
+			/* Check features support or not */
+			if (!ovl_check_feature_support(&ofs->upper_layer)) {
+				print_info(_("Unknown features found on "
+					     "upper layer root: %s\n"
+					     "Get a newer version of %s!\n"),
+					     ofs->upper_layer.path,
+					     program_name);
+				return -1;
+			}
 		}
 	}
 
@@ -218,6 +228,16 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 			ret = ovl_check_feature_set(&ofs->lower_layer[i]);
 			if (ret)
 				return ret;
+
+			/* Check features support or not */
+			if (!ovl_check_feature_support(&ofs->lower_layer[i])) {
+				print_info(_("Unknown features found on "
+					     "lower layer root: %s\n"
+					     "Get a newer version of %s!\n"),
+					     ofs->lower_layer[i].path,
+					     program_name);
+				return -1;
+			}
 		}
 	}
 

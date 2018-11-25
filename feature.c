@@ -144,3 +144,29 @@ int ovl_set_feature(struct ovl_layer *layer,
 	*feature = *temp;
 	return err;
 }
+
+/* Check feature set on one layer were support or not */
+bool ovl_check_feature_support(struct ovl_layer *layer)
+{
+	bool support = true;
+
+	if (ovl_has_unknown_compat_features(layer)) {
+		print_info(_("Unknown compat features %llx\n"),
+			     layer->compat & OVL_FEATURE_COMPAT_UNKNOWN);
+		support = false;
+	}
+
+	if (ovl_has_unknown_ro_compat_features(layer)) {
+		print_info(_("Unknown ro_compat features %llx\n"),
+			     layer->ro_compat & OVL_FEATURE_RO_COMPAT_UNKNOWN);
+		support = false;
+	}
+
+	if (ovl_has_unknown_incompat_features(layer)) {
+		print_info(_("Unknown incompat features %llx\n"),
+			     layer->incompat & OVL_FEATURE_INCOMPAT_UNKNOWN);
+		support = false;
+	}
+
+	return support;
+}

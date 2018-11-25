@@ -61,6 +61,21 @@
 #define OVL_FEATURE_MAGIC	0xfe
 #define OVL_FEATURE_VERSION_1	0x1
 
+static inline bool ovl_has_unknown_compat_features(struct ovl_layer *layer)
+{
+	return !!(layer->compat & OVL_FEATURE_COMPAT_UNKNOWN);
+}
+
+static inline bool ovl_has_unknown_ro_compat_features(struct ovl_layer *layer)
+{
+	return !!(layer->ro_compat & OVL_FEATURE_RO_COMPAT_UNKNOWN);
+}
+
+static inline bool ovl_has_unknown_incompat_features(struct ovl_layer *layer)
+{
+	return !!(layer->incompat & OVL_FEATURE_INCOMPAT_UNKNOWN);
+}
+
 enum ovl_feature_type {
 	OVL_FEATURE_COMPAT,
 	OVL_FEATURE_RO_COMPAT,
