@@ -42,6 +42,7 @@
 #include "check.h"
 #include "path.h"
 #include "list.h"
+#include "feature.h"
 #include "overlayfs.h"
 
 /* Lookup context */
@@ -899,6 +900,36 @@ static void ovl_scan_update_result(struct scan_result *pass,
 	total->m_impure = max(pass->m_impure, total->m_impure);
 }
 
+static int ovl_scan_features(struct ovl_layer *layer,
+			     struct scan_result *result)
+{
+	int ret;
+
+	if (!(layer->flag & FS_LAYER_XATTR))
+		return 0;
+	if (layer->flag & FS_LAYER_RO)
+		return 0;
+
+	/*
+	 * Fix redirect dir feature if we found redirect xattr on this layer.
+	 * Note that this is just an suggestion now, it's ok if user say "n"
+	 * for backward compatibility.
+	 */
+	if (result->t_redirects && !ovl_has_feature_redirect_dir(layer)) {
+
+		if (ovl_ask_action("Missing redirect feature", layer->path,
+				   layer->type, layer->stack, "fix", 0)) {
+			ret = ovl_set_feature_redirect_dir(layer);
+			if (ret)
+				return ret;
+
+			set_changed(&status);
+		}
+	}
+
+	return 0;
+}
+
 static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 			  int pass, struct scan_result *result)
 {
@@ -960,6 +991,8 @@ static int ovl_scan_layer(struct ovl_fs *ofs, struct ovl_layer *layer,
 
 	sctx.layer = layer;
 	ret = scan_dir(&sctx, &ops);
+	if (!ret)
+		ret = ovl_scan_features(layer, &sctx.result);
 
 	/* Check scan result for this pass */
 	ovl_scan_check(&sctx.result);
