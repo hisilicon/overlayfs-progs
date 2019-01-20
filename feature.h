@@ -69,6 +69,7 @@ static inline int ovl_set_feature_##name(struct ovl_layer *layer) \
 }
 
 OVL_FEATURE_COMPAT_FUNCS(feature_set, FEATURE_SET);
+OVL_FEATURE_RO_COMPAT_FUNCS(index, INDEX);
 OVL_FEATURE_INCOMPAT_FUNCS(redirect_dir, REDIRECT_DIR);
 
 #endif /* OVL_FEATURE_H */

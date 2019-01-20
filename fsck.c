@@ -55,6 +55,49 @@ struct ovl_fs ofs = {};
 int flags = 0;		/* user input option flags */
 int status = 0;		/* fsck scan status */
 
+/*
+ * Do some basic check for the indexdir if it exists, does not iterate
+ * the dir.
+ */
+static int ovl_basic_check_indexdir(struct ovl_fs *ofs)
+{
+	struct stat st;
+	int ret;
+
+	ret = fstatat(ofs->workdir.fd, OVL_INDEXDIR_NAME, &st,
+		      AT_SYMLINK_NOFOLLOW);
+	if (ret) {
+		if (errno != ENOENT) {
+			print_err(_("Stat %s failed: %s\n"),
+				    OVL_INDEXDIR_NAME,
+				    strerror(errno));
+			return -1;
+		}
+		/* Index dir does not exists, nothing todo */
+		return 0;
+	}
+
+	if (is_dir(&st)) {
+		/* Index dir exists, set index flag */
+		ofs->workdir.flag |= FS_LAYER_INDEX;
+	} else {
+		/* Invalid non-directory named "index" exists, remove it */
+		if (!ovl_ask_question("Remove invalid index non-directory",
+				      ofs->workdir.path, ofs->workdir.type,
+				      ofs->workdir.stack, 1)) {
+			set_inconsistency(&status);
+		} else {
+			ret = unlinkat(ofs->workdir.fd, ofs->workdir.path, 0);
+			if (ret) {
+				print_err(_("Cannot unlink %s: %s\n"),
+					    ofs->workdir.path, strerror(errno));
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
 /* Do some basic check for the workdir, not iterate the dir */
 static int ovl_basic_check_workdir(struct ovl_fs *ofs)
 {
@@ -93,6 +136,10 @@ static int ovl_basic_check_workdir(struct ovl_fs *ofs)
 		print_info(_("Workdir is read-only\n"));
 		return -1;
 	}
+
+	ret = ovl_basic_check_indexdir(ofs);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -201,24 +248,44 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 			return -1;
 		}
 
-		/* Check layer feature */
-		if (ofs->upper_layer.flag & FS_LAYER_XATTR) {
-			ret = ovl_check_feature_set(&ofs->upper_layer);
-			if (ret)
-				return ret;
+		if (!(ofs->upper_layer.flag & FS_LAYER_XATTR))
+			goto lower;
 
-			/* Check features support or not */
-			if (!ovl_check_feature_support(&ofs->upper_layer)) {
-				print_info(_("Unknown features found on "
-					     "upper layer root: %s\n"
-					     "Get a newer version of %s!\n"),
-					     ofs->upper_layer.path,
-					     program_name);
-				return -1;
+		/* Check upper layer feature */
+		ret = ovl_check_feature_set(&ofs->upper_layer);
+		if (ret)
+			return ret;
+		/*
+		 * Fix index feature when index dir detected. Note that
+		 * this is just an suggestion now, it's ok if user say
+		 * 'n' for backward compatibility.
+		 */
+		if ((ofs->workdir.flag & FS_LAYER_INDEX) &&
+		    !ovl_has_feature_index(&ofs->upper_layer)) {
+			if (ovl_ask_action("Missing index feature",
+					   ofs->upper_layer.path,
+					   ofs->upper_layer.type,
+					   ofs->upper_layer.stack,
+					   "Fix", 0)) {
+
+				ret = ovl_set_feature_index(&ofs->upper_layer);
+				if (ret)
+					return ret;
+
+				set_changed(&status);
 			}
 		}
+		/* Check features support or not */
+		if (!ovl_check_feature_support(&ofs->upper_layer)) {
+			print_info(_("Unknown features found on "
+				     "upper layer root: %s\n"
+				     "Get a newer version of %s!\n"),
+				     ofs->upper_layer.path,
+				     program_name);
+			return -1;
+		}
 	}
-
+lower:
 	for (i = 0; i < ofs->lower_num; i++) {
 		ret = ovl_basic_check_layer(&ofs->lower_layer[i]);
 		if (ret)
