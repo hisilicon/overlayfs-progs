@@ -26,11 +26,16 @@
 #define OVL_WORK	2
 #define OVL_PTYPE_MAX	3
 
+/* overlayfs on-disk format */
+#define OVL_FS_V1	0	/* feature set are optional */
+#define OVL_FS_UPPER_V2 1	/* feature set are necessary for the upper layer */
+#define OVL_FS_V2	2	/* feature set are necessary for all layers */
 
 struct ovl_config {
 	char *lowerdir;
 	char *upperdir;
 	char *workdir;
+	int format;
 };
 
 /* Information for each underlying layer */

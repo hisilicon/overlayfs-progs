@@ -148,7 +148,8 @@ static int ovl_basic_check_workdir(struct ovl_fs *ofs)
  * Check and fix layer feature set, return 0 if it pass checking,
  * errno if something wrong.
  */
-static int ovl_check_feature_set(struct ovl_layer *layer)
+static int ovl_check_feature_set(struct ovl_fs *ofs,
+				 struct ovl_layer *layer)
 {
 	int err;
 
@@ -183,33 +184,36 @@ static int ovl_check_feature_set(struct ovl_layer *layer)
 				goto inconsistency;
 
 			set_changed(&status);
-			goto out;
+		} else {
+			goto inconsistency;
 		}
-		goto inconsistency;
-
 	} else if (err == ENODATA) {
 		/*
 		 * No feature set found on this layer, try to init an
 		 * empty one.
 		 */
-		if (layer->flag & FS_LAYER_RO)
-			goto out;
+		if (layer->flag & FS_LAYER_RO) {
+			if (!ovl_features_required(ofs, layer))
+				goto out;
+			print_info(_("Cannot init feature set because "
+				     "layer is read-only\n"));
+			goto inconsistency;
+		}
 
-		/*
-		 * Note that this is not necessary now if user say "no"
-		 * for backward compatibility.
-		 */
 		if (ovl_ask_action("No feature set found", layer->path,
 				   layer->type, layer->stack,
-				   "Create an empty one", 0)) {
+				   "Create an empty one",
+				   ovl_features_required(ofs, layer))) {
 
 			err = ovl_set_feature_feature_set(layer);
 			if (err)
-				goto fail;
+				goto inconsistency;
 
 			set_changed(&status);
+		} else {
+			if (ovl_features_required(ofs, layer))
+				goto inconsistency;
 		}
-		goto out;
 	}
 out:
 	return err;
@@ -248,11 +252,19 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 			return -1;
 		}
 
-		if (!(ofs->upper_layer.flag & FS_LAYER_XATTR))
+		if (!(ofs->upper_layer.flag & FS_LAYER_XATTR)) {
+			/* Upper layer must support xattr when OVL_LAYER_V2 */
+			if (ofs->config.format != OVL_FS_V1) {
+				print_info(_("Upper layer %s should "
+					     "support xattr in V2\n"),
+					     ofs->upper_layer.path);
+				return -1;
+			}
 			goto lower;
+		}
 
 		/* Check upper layer feature */
-		ret = ovl_check_feature_set(&ofs->upper_layer);
+		ret = ovl_check_feature_set(ofs, &ofs->upper_layer);
 		if (ret)
 			return ret;
 		/*
@@ -291,20 +303,28 @@ lower:
 		if (ret)
 			return ret;
 
-		if (ofs->lower_layer[i].flag & FS_LAYER_XATTR) {
-			ret = ovl_check_feature_set(&ofs->lower_layer[i]);
-			if (ret)
-				return ret;
-
-			/* Check features support or not */
-			if (!ovl_check_feature_support(&ofs->lower_layer[i])) {
-				print_info(_("Unknown features found on "
-					     "lower layer root: %s\n"
-					     "Get a newer version of %s!\n"),
-					     ofs->lower_layer[i].path,
-					     program_name);
+		if (!(ofs->lower_layer[i].flag & FS_LAYER_XATTR)) {
+			if (ofs->config.format == OVL_FS_V2) {
+				print_info(_("Lower layer %s should "
+					     "support xattr in V2\n"),
+					     ofs->lower_layer[i].path);
 				return -1;
 			}
+			continue;
+		}
+
+		ret = ovl_check_feature_set(ofs, &ofs->lower_layer[i]);
+		if (ret)
+			return ret;
+
+		/* Check features support or not */
+		if (!ovl_check_feature_support(&ofs->lower_layer[i])) {
+			print_info(_("Unknown features found on "
+				     "lower layer root: %s\n"
+				     "Get a newer version of %s!\n"),
+				     ofs->lower_layer[i].path,
+				     program_name);
+			return -1;
 		}
 	}
 
