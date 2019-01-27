@@ -272,19 +272,22 @@ static int ovl_basic_check(struct ovl_fs *ofs)
 		 * this is just an suggestion now, it's ok if user say
 		 * 'n' for backward compatibility.
 		 */
-		if ((ofs->workdir.flag & FS_LAYER_INDEX) &&
+		if (ovl_has_feature_feature_set(&ofs->upper_layer) &&
+		    (ofs->workdir.flag & FS_LAYER_INDEX) &&
 		    !ovl_has_feature_index(&ofs->upper_layer)) {
 			if (ovl_ask_action("Missing index feature",
 					   ofs->upper_layer.path,
 					   ofs->upper_layer.type,
 					   ofs->upper_layer.stack,
-					   "Fix", 0)) {
+					   "Fix", 1)) {
 
 				ret = ovl_set_feature_index(&ofs->upper_layer);
 				if (ret)
 					return ret;
 
 				set_changed(&status);
+			} else {
+				set_inconsistency(&status);
 			}
 		}
 		/* Check features support or not */
